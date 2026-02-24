@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Award Tracker — White Mirror Stories</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+:root{--ink:#1a1a2e;--page:#faf8f3;--accent:#c7956d;--green:#4a7c59;--red:#8b4049;--yellow:#c9923b;--border:#d4caba;--muted:#888;--card:#fff;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Crimson Pro',serif;background:var(--page);color:var(--ink);line-height:1.6;min-height:100vh;}
+.wrap{max-width:1300px;margin:0 auto;padding:40px 24px 80px;}
+.site-header{border-bottom:3px solid var(--ink);padding-bottom:24px;margin-bottom:36px;position:relative;}
+.site-header::after{content:'';position:absolute;bottom:-6px;left:0;width:100px;height:3px;background:var(--accent);}
+.site-header h1{font-size:clamp(2rem,5vw,3.2rem);font-weight:700;letter-spacing:-.02em;}
+.site-header .sub{font-family:'Space Mono',monospace;font-size:.8rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-top:6px;}
+.book-card{display:flex;align-items:center;gap:24px;background:var(--card);border:2px solid var(--border);padding:20px 28px;margin-bottom:28px;box-shadow:6px 6px 0 rgba(26,26,46,.06);}
+.book-spine{width:12px;background:var(--accent);align-self:stretch;flex-shrink:0;border-radius:2px;}
+.book-info .title{font-size:1.7rem;font-weight:600;}
+.book-info .publisher{font-family:'Space Mono',monospace;font-size:.8rem;color:var(--muted);margin:4px 0 12px;}
+.tags{display:flex;flex-wrap:wrap;gap:8px;}
+.tag{padding:5px 14px;background:var(--ink);color:white;font-family:'Space Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;border-radius:2px;}
+.tag.acc{background:var(--accent);}
+.panel{padding:26px 30px;margin-bottom:24px;position:relative;}
+.panel h2{font-size:1.25rem;font-weight:600;display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.panel p{color:#555;font-size:1rem;margin-bottom:14px;}
+.panel-manuscript{background:linear-gradient(135deg,#f0f4ff,#f7f3eb);border:2px dashed #7a9cc7;}
+.panel-ai{background:linear-gradient(135deg,#f7f3eb,var(--page));border:2px dashed var(--accent);}
+.badge{color:white;padding:3px 10px;font-size:.68rem;font-family:'Space Mono',monospace;border-radius:12px;text-transform:uppercase;letter-spacing:.04em;}
+.badge-blue{background:#5a82c7;}.badge-accent{background:var(--accent);}
+.upload-zone{border:2px dashed #7a9cc7;background:rgba(122,156,199,.06);padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;border-radius:4px;margin-bottom:14px;}
+.upload-zone:hover,.upload-zone.drag{border-color:#4a6fa5;background:rgba(122,156,199,.12);}
+.upload-zone .upload-icon{font-size:2.4rem;margin-bottom:10px;}
+.upload-zone p{font-family:'Space Mono',monospace;font-size:.8rem;color:var(--muted);}
+.upload-zone strong{color:#4a6fa5;}
+input[type="file"]{display:none;}
+.ms-result{background:white;border:2px solid #c5d4e8;padding:20px 22px;border-radius:2px;margin-bottom:14px;}
+.ms-result h3{font-size:1.1rem;font-weight:600;margin-bottom:12px;color:#2a3a5e;}
+.ms-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px;}
+.ms-meta-item{background:#f4f7fc;padding:10px 14px;border-left:3px solid #7a9cc7;}
+.ms-meta-item .k{font-family:'Space Mono',monospace;font-size:.68rem;text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
+.ms-meta-item .v{font-size:1rem;font-weight:600;}
+.ms-awards-found h4{font-family:'Space Mono',monospace;font-size:.78rem;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.ms-award-row{display:flex;align-items:center;gap:12px;padding:10px 12px;background:#f9fafb;border-left:3px solid var(--green);margin-bottom:6px;}
+.ms-award-row .aw-name{flex:1;font-weight:600;}
+.ms-award-row .aw-match{font-family:'Space Mono',monospace;font-size:.72rem;color:var(--green);}
+.search-row{display:flex;gap:10px;}
+.search-row input{flex:1;padding:12px 16px;border:2px solid var(--border);font-family:'Crimson Pro',serif;font-size:1rem;background:white;transition:border-color .2s;}
+.search-row input:focus{outline:none;border-color:var(--accent);}
+.status-line{margin-top:10px;font-size:.9rem;color:var(--muted);min-height:20px;}
+.btn{padding:11px 20px;border:none;font-family:'Space Mono',monospace;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.btn-primary{background:var(--ink);color:white;}
+.btn-primary:hover:not(:disabled){background:var(--accent);transform:translateY(-2px);}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;}
+.btn-blue{background:#4a6fa5;color:white;}
+.btn-blue:hover:not(:disabled){background:#3a5a8a;transform:translateY(-2px);}
+.btn-blue:disabled{opacity:.45;cursor:not-allowed;}
+.btn-outline{background:white;color:var(--ink);border:2px solid var(--ink);}
+.btn-outline:hover{background:var(--ink);color:white;}
+.btn-danger{background:var(--red);color:white;}
+.btn-sm{padding:7px 13px;font-size:.7rem;}
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px;margin-bottom:28px;}
+.stat-box{background:var(--card);border:2px solid var(--border);padding:16px 18px;text-align:center;cursor:pointer;transition:border-color .2s,transform .15s;}
+.stat-box:hover{border-color:var(--accent);transform:translateY(-2px);}
+.stat-box .num{font-size:2.4rem;font-weight:700;line-height:1;}
+.stat-box .lbl{font-family:'Space Mono',monospace;font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-top:6px;}
+.cg .num{color:var(--green);}.cy .num{color:var(--yellow);}.cr .num{color:var(--red);}
+.tab-bar{display:flex;gap:2px;border-bottom:2px solid var(--border);margin-bottom:22px;overflow-x:auto;}
+.tab-btn{padding:10px 18px;background:transparent;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;font-family:'Space Mono',monospace;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;color:var(--muted);transition:all .15s;white-space:nowrap;}
+.tab-btn:hover{color:var(--ink);background:rgba(199,149,109,.08);}
+.tab-btn.active{color:var(--ink);border-bottom-color:var(--accent);}
+.toolbar{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+.toolbar input[type="search"]{padding:10px 14px;border:2px solid var(--border);font-family:'Crimson Pro',serif;font-size:.95rem;background:white;min-width:200px;flex:1;}
+.toolbar input[type="search"]:focus{outline:none;border-color:var(--accent);}
+.awards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;}
+.award-card{background:var(--card);border:2px solid var(--border);padding:20px 20px 14px;position:relative;transition:border-color .25s,box-shadow .25s,transform .2s;}
+.award-card:hover{border-color:var(--accent);box-shadow:0 6px 22px rgba(26,26,46,.1);transform:translateY(-3px);}
+.status-dot{position:absolute;top:16px;right:16px;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,.2);}
+.dot-eligible{background:var(--green);}.dot-submitted{background:var(--yellow);}.dot-ineligible{background:var(--red);}.dot-researching{background:#9baabf;}
+.award-card .aw-name{font-size:1.2rem;font-weight:600;padding-right:24px;margin-bottom:5px;}
+.award-card .url-line{font-family:'Space Mono',monospace;font-size:.7rem;color:var(--accent);margin-bottom:10px;word-break:break-all;}
+.award-card .url-line a{color:inherit;text-decoration:none;border-bottom:1px dashed;}
+.award-card .notes{font-size:.95rem;color:#444;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.deadline-pill{display:inline-block;padding:4px 10px;background:#fff9f0;border-left:3px solid var(--yellow);font-family:'Space Mono',monospace;font-size:.7rem;margin-bottom:10px;}
+.deadline-pill.urgent{border-left-color:var(--red);background:#fff2f3;}
+.award-card select{width:100%;padding:8px 10px;border:2px solid var(--border);font-family:'Space Mono',monospace;font-size:.73rem;background:white;cursor:pointer;margin-bottom:8px;}
+.award-card select:focus{outline:none;border-color:var(--accent);}
+.card-actions{display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--border);}
+.card-actions .btn{flex:1;}
+.req-progress{font-family:'Space Mono',monospace;font-size:.7rem;color:var(--green);margin-bottom:4px;}
+.req-bar{height:4px;background:var(--border);border-radius:2px;margin-bottom:10px;overflow:hidden;}
+.req-bar-fill{height:100%;background:var(--green);border-radius:2px;transition:width .4s;}
+.empty{text-align:center;padding:60px 24px;color:var(--muted);grid-column:1/-1;}
+.empty h3{font-size:1.4rem;margin-bottom:10px;color:var(--ink);}
+.page-loader{text-align:center;padding:80px 24px;grid-column:1/-1;}
+.spinner{display:inline-block;width:36px;height:36px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.spinner-wrap{text-align:center;padding:32px;color:var(--muted);}
+.spinner-wrap .spinner{display:block;margin:0 auto 14px;}
+.overlay{display:none;position:fixed;inset:0;background:rgba(26,26,46,.75);z-index:900;align-items:center;justify-content:center;padding:20px;}
+.overlay.open{display:flex;}
+.modal{background:white;border:3px solid var(--ink);box-shadow:14px 14px 0 rgba(26,26,46,.12);width:100%;max-width:700px;max-height:92vh;overflow-y:auto;animation:slideUp .25s;}
+.modal-sm{max-width:540px;}
+@keyframes slideUp{from{transform:translateY(18px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal-head{padding:22px 26px 16px;background:#f7f3eb;border-bottom:2px solid var(--border);position:sticky;top:0;z-index:10;}
+.modal-head h2{font-size:1.6rem;font-weight:700;}
+.modal-head .murl{font-family:'Space Mono',monospace;font-size:.73rem;color:var(--accent);margin-top:4px;}
+.modal-head .murl a{color:inherit;}
+.modal-body{padding:26px;}
+.modal-body h3{font-size:1.1rem;font-weight:600;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid var(--accent);}
+.modal-footer{display:flex;gap:10px;padding:0 26px 26px;flex-wrap:wrap;}
+.modal-footer .btn{flex:1;min-width:110px;}
+.checklist{list-style:none;margin-bottom:18px;}
+.checklist li{display:flex;align-items:flex-start;gap:12px;padding:10px 12px;border-left:3px solid var(--border);background:#faf8f3;margin-bottom:6px;transition:border-color .2s;cursor:pointer;user-select:none;}
+.checklist li:hover{border-left-color:var(--accent);}
+.checklist li.done{border-left-color:var(--green);opacity:.65;}
+.checklist li.done .req-text{text-decoration:line-through;}
+.checklist input[type="checkbox"]{width:17px;height:17px;flex-shrink:0;margin-top:3px;cursor:pointer;accent-color:var(--green);}
+.req-text{font-size:1rem;}
+.add-req-row{display:flex;gap:8px;margin-top:10px;}
+.add-req-row input{flex:1;padding:10px 14px;border:2px solid var(--border);font-family:'Crimson Pro',serif;font-size:.95rem;}
+.add-req-row input:focus{outline:none;border-color:var(--accent);}
+.progress-info{padding:11px 14px;background:#f0f7f2;border-left:3px solid var(--green);font-family:'Space Mono',monospace;font-size:.78rem;margin-top:14px;}
+.form-row{margin-bottom:16px;}
+.form-row label{display:block;font-family:'Space Mono',monospace;font-size:.75rem;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.form-row input,.form-row textarea,.form-row select{width:100%;padding:10px 14px;border:2px solid var(--border);font-family:'Crimson Pro',serif;font-size:1rem;background:white;}
+.form-row input:focus,.form-row textarea:focus{outline:none;border-color:var(--accent);}
+.form-row textarea{min-height:80px;resize:vertical;}
+.toast{position:fixed;bottom:28px;right:28px;background:var(--ink);color:white;padding:13px 20px;font-family:'Space Mono',monospace;font-size:.78rem;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.25);border-left:4px solid var(--accent);animation:toastIn .3s;max-width:320px;}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+@media(max-width:640px){.awards-grid{grid-template-columns:1fr;}.search-row{flex-direction:column;}.stats-bar{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="site-header">
+    <h1>Award Tracker</h1>
+    <div class="sub">Literary Prize Management — White Mirror Stories</div>
+  </header>
+
+  <div class="book-card">
+    <div class="book-spine"></div>
+    <div class="book-info">
+      <div class="title" id="bookTitle">White Mirror Stories</div>
+      <div class="publisher">Infinite Books</div>
+      <div class="tags" id="bookTags">
+        <span class="tag">Science Fiction</span>
+        <span class="tag">Fantasy</span>
+        <span class="tag">Short Stories</span>
+        <span class="tag acc">Indie Publisher</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel panel-manuscript">
+    <h2>📄 Manuscript Award Matcher <span class="badge badge-blue">Claude AI</span></h2>
+    <p>Upload your manuscript (PDF or DOCX) — Claude reads it, identifies genre, themes and audience, then finds awards that suit your specific book.</p>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('msFile').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
+      <div class="upload-icon">📂</div>
+      <p><strong>Click to upload</strong> or drag & drop</p>
+      <p>Supports .PDF and .DOCX</p>
+    </div>
+    <input type="file" id="msFile" accept=".pdf,.docx" onchange="handleFileSelect(event)">
+    <div id="msStatus" class="status-line"></div>
+    <div id="msResult"></div>
+  </div>
+
+  <div class="panel panel-ai">
+    <h2>🔍 AI Award Discovery <span class="badge badge-accent">Claude AI</span></h2>
+    <p>Describe what you're looking for — Claude searches the web and adds relevant awards to your tracker.</p>
+    <div class="search-row">
+      <input type="text" id="aiQuery" placeholder="e.g. indie publisher science fiction short story awards 2026…" onkeydown="if(event.key==='Enter')discoverAwards()">
+      <button class="btn btn-primary" id="discoverBtn" onclick="discoverAwards()">Discover Awards</button>
+    </div>
+    <div id="discoverStatus" class="status-line"></div>
+  </div>
+
+  <div class="stats-bar" id="statsBar"></div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('all',this)">All</button>
+    <button class="tab-btn" onclick="switchTab('eligible',this)">Eligible</button>
+    <button class="tab-btn" onclick="switchTab('submitted',this)">Submitted</button>
+    <button class="tab-btn" onclick="switchTab('researching',this)">Researching</button>
+    <button class="tab-btn" onclick="switchTab('ineligible',this)">Not Eligible</button>
+  </div>
+
+  <div class="toolbar">
+    <input type="search" id="filterInput" placeholder="Filter awards…" oninput="renderAwards()">
+    <button class="btn btn-outline btn-sm" onclick="openAddModal()">+ Add Manually</button>
+    <button class="btn btn-outline btn-sm" onclick="exportCSV()">Export CSV</button>
+  </div>
+
+  <div class="awards-grid" id="awardsGrid">
+    <div class="page-loader"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- Requirements Modal -->
+<div class="overlay" id="reqOverlay" onclick="maybeClose(event,'reqOverlay')">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="mTitle"></h2>
+      <div class="murl"><a id="mUrl" href="#" target="_blank" rel="noopener"></a></div>
+    </div>
+    <div class="modal-body" id="mBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('reqOverlay')">Close</button>
+      <button class="btn btn-primary" id="mAnalyzeBtn" onclick="analyzeCurrentAward()">✦ AI Analyze</button>
+      <button class="btn btn-outline" onclick="visitCurrentUrl()">↗ Visit Site</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Modal -->
+<div class="overlay" id="addOverlay" onclick="maybeClose(event,'addOverlay')">
+  <div class="modal modal-sm">
+    <div class="modal-head"><h2>Add Award Manually</h2></div>
+    <div class="modal-body">
+      <div class="form-row"><label>Award Name *</label><input type="text" id="fName" placeholder="e.g. Booker Prize"></div>
+      <div class="form-row"><label>Website URL</label><input type="text" id="fUrl" placeholder="https://…"></div>
+      <div class="form-row"><label>Notes</label><textarea id="fNotes" placeholder="Eligibility notes…"></textarea></div>
+      <div class="form-row"><label>Deadline</label><input type="text" id="fDeadline" placeholder="e.g. January 15, 2026"></div>
+      <div class="form-row"><label>Status</label>
+        <select id="fStatus">
+          <option value="researching">📋 Researching</option>
+          <option value="eligible">✅ Eligible</option>
+          <option value="submitted">📬 Submitted</option>
+          <option value="ineligible">✗ Not Eligible</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('addOverlay')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNewAward()">Add Award</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let awards = [], currentTab = 'all', currentAwardId = null, msAnalysis = null;
+
+async function load() {
+  try {
+    const [aRes, rRes] = await Promise.all([
+      fetch('/api/data?type=awards'),
+      fetch('/api/data?type=requirements')
+    ]);
+    awards = await aRes.json();
+    const allReqs = await rRes.json();
+    awards.forEach(a => { a.requirements = allReqs.filter(r => r.awardId === a.id); });
+  } catch(e) { console.error(e); awards = []; }
+  render();
+}
+
+function renderStats() {
+  const c = {all:awards.length,eligible:awards.filter(a=>a.status==='eligible').length,submitted:awards.filter(a=>a.status==='submitted').length,researching:awards.filter(a=>a.status==='researching').length,ineligible:awards.filter(a=>a.status==='ineligible').length};
+  document.getElementById('statsBar').innerHTML=`
+    <div class="stat-box" onclick="switchTabName('all')"><div class="num">${c.all}</div><div class="lbl">Total</div></div>
+    <div class="stat-box cg" onclick="switchTabName('eligible')"><div class="num">${c.eligible}</div><div class="lbl">Eligible</div></div>
+    <div class="stat-box cy" onclick="switchTabName('submitted')"><div class="num">${c.submitted}</div><div class="lbl">Submitted</div></div>
+    <div class="stat-box" onclick="switchTabName('researching')"><div class="num">${c.researching}</div><div class="lbl">Researching</div></div>
+    <div class="stat-box cr" onclick="switchTabName('ineligible')"><div class="num">${c.ineligible}</div><div class="lbl">Not Eligible</div></div>`;
+}
+
+function renderAwards() {
+  const q = (document.getElementById('filterInput').value||'').toLowerCase();
+  const list = awards.filter(a => {
+    if (currentTab !== 'all' && a.status !== currentTab) return false;
+    if (q && !a.name.toLowerCase().includes(q) && !(a.notes||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const grid = document.getElementById('awardsGrid');
+  if (!list.length) { grid.innerHTML='<div class="empty"><h3>No awards here</h3><p>Discover new awards above or add manually.</p></div>'; return; }
+  grid.innerHTML = list.map(a => {
+    const reqs=a.requirements||[],total=reqs.length,done=reqs.filter(r=>r.done).length,pct=total?Math.round(done/total*100):0,urg=isUrgent(a.deadline);
+    return `<div class="award-card">
+      <div class="status-dot dot-${a.status}"></div>
+      <div class="aw-name">${esc(a.name)}</div>
+      ${a.url?`<div class="url-line"><a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.url)}</a></div>`:''}
+      <div class="notes">${esc(a.notes||'—')}</div>
+      ${a.deadline?`<div class="deadline-pill${urg?' urgent':''}">${urg?'⚠ ':''}<strong>Deadline:</strong> ${esc(a.deadline)}</div>`:''}
+      ${total?`<div class="req-progress">${done}/${total} requirements (${pct}%)</div><div class="req-bar"><div class="req-bar-fill" style="width:${pct}%"></div></div>`:''}
+      <select onchange="updateStatus('${a.id}',this.value)">
+        <option value="researching"${a.status==='researching'?' selected':''}>📋 Researching</option>
+        <option value="eligible"${a.status==='eligible'?' selected':''}>✅ Eligible</option>
+        <option value="submitted"${a.status==='submitted'?' selected':''}>📬 Submitted</option>
+        <option value="ineligible"${a.status==='ineligible'?' selected':''}>✗ Not Eligible</option>
+      </select>
+      <div class="card-actions">
+        <button class="btn btn-outline btn-sm" onclick="openReqModal('${a.id}')">${total?'View Checklist':'AI Analyze'}</button>
+        <button class="btn btn-danger btn-sm" style="flex:0 0 auto;" onclick="deleteAward('${a.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function render() { renderStats(); renderAwards(); }
+function switchTab(tab,el){currentTab=tab;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderAwards();}
+function switchTabName(tab){currentTab=tab;document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.toggle('active',b.textContent.toLowerCase().trim().startsWith(tab==='all'?'all':tab.slice(0,4)));});renderAwards();}
+
+async function updateStatus(id,status){
+  await fetch('/api/data?type=awards',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,status})});
+  awards=awards.map(a=>a.id===id?{...a,status}:a);render();
+}
+
+async function deleteAward(id){
+  if(!confirm('Delete this award?'))return;
+  const award=awards.find(a=>a.id===id);
+  if(award&&award.requirements){
+    await Promise.all(award.requirements.map(r=>fetch('/api/data?type=requirements',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:r.id})})));
+  }
+  await fetch('/api/data?type=awards',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+  awards=awards.filter(a=>a.id!==id);render();
+}
+
+function openReqModal(id){
+  currentAwardId=id;const a=awards.find(a=>a.id===id);
+  document.getElementById('mTitle').textContent=a.name;
+  const el=document.getElementById('mUrl');el.textContent=a.url||'';el.href=a.url||'#';
+  renderModalBody(a);document.getElementById('reqOverlay').classList.add('open');
+}
+
+function renderModalBody(a){
+  const reqs=a.requirements||[],body=document.getElementById('mBody');
+  if(!reqs.length){body.innerHTML=`<p style="color:var(--muted);margin-bottom:18px;">No requirements yet. Click <strong>✦ AI Analyze</strong> to extract them from the award website automatically.</p><h3 style="margin-top:0;">Add Manually</h3><div class="add-req-row"><input type="text" id="newReqInput" placeholder="e.g. Submit 3 physical copies…"><button class="btn btn-primary btn-sm" onclick="addManualReq()">Add</button></div>`;return;}
+  const done=reqs.filter(r=>r.done).length;
+  body.innerHTML=`<h3>Submission Checklist</h3><ul class="checklist">${reqs.map(r=>`<li class="${r.done?'done':''}" onclick="toggleReq('${r.id}')"><input type="checkbox" ${r.done?'checked':''} onclick="event.stopPropagation();toggleReq('${r.id}')"><span class="req-text">${esc(r.text)}</span></li>`).join('')}</ul><div class="add-req-row"><input type="text" id="newReqInput" placeholder="Add a custom requirement…"><button class="btn btn-primary btn-sm" onclick="addManualReq()">Add</button></div><div class="progress-info">${done} of ${reqs.length} completed — ${Math.round(done/reqs.length*100)}%</div>`;
+}
+
+async function toggleReq(reqId){
+  const award=awards.find(a=>a.id===currentAwardId),req=award.requirements.find(r=>r.id===reqId),newDone=!req.done;
+  await fetch('/api/data?type=requirements',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:reqId,done:newDone})});
+  award.requirements=award.requirements.map(r=>r.id===reqId?{...r,done:newDone}:r);
+  renderModalBody(award);renderAwards();
+}
+
+async function addManualReq(){
+  const inp=document.getElementById('newReqInput'),text=inp.value.trim();if(!text)return;
+  const res=await fetch('/api/data?type=requirements',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({awardId:currentAwardId,text,done:false})});
+  const newReq=await res.json();
+  const award=awards.find(a=>a.id===currentAwardId);award.requirements.push(newReq);
+  inp.value='';renderModalBody(award);renderAwards();
+}
+
+function visitCurrentUrl(){const a=awards.find(a=>a.id===currentAwardId);if(a&&a.url)window.open(a.url,'_blank');}
+
+async function analyzeCurrentAward(){
+  const award=awards.find(a=>a.id===currentAwardId);if(!award)return;
+  const btn=document.getElementById('mAnalyzeBtn');btn.disabled=true;btn.textContent='Analyzing…';
+  document.getElementById('mBody').innerHTML=`<div class="spinner-wrap"><div class="spinner"></div><p>Claude is visiting <strong>${esc(award.name)}</strong> and extracting requirements…</p></div>`;
+  try{
+    const res=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'analyze',awardName:award.name,awardUrl:award.url})});
+    const data=await res.json();
+    const text=data.content.filter(i=>i.type==='text').map(i=>i.text).join('\n');
+    let reqs;try{reqs=JSON.parse(text.replace(/```json|```/g,'').trim());}catch(pe){const m=text.match(/\[[\s\S]*\]/);if(!m)throw new Error('parse');reqs=JSON.parse(m[0]);}
+    const saved=await Promise.all(reqs.map(r=>fetch('/api/data?type=requirements',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({awardId:currentAwardId,text:r.text,done:false})}).then(res=>res.json())));
+    award.requirements=saved;renderModalBody(award);renderAwards();toast('Requirements loaded for '+award.name);
+  }catch(e){
+    console.error(e);
+    document.getElementById('mBody').innerHTML=`<div style="padding:14px;border-left:3px solid var(--red);background:#fff2f3;font-family:'Space Mono',monospace;font-size:.78rem;margin-bottom:16px;">⚠ Could not auto-extract. Add manually or visit the site.</div><div class="add-req-row"><input type="text" id="newReqInput" placeholder="Add requirement manually…"><button class="btn btn-primary btn-sm" onclick="addManualReq()">Add</button></div>`;
+  }finally{btn.disabled=false;btn.textContent='✦ AI Analyze';}
+}
+
+async function discoverAwards(){
+  const q=document.getElementById('aiQuery').value.trim();if(!q){toast('Enter some keywords first.');return;}
+  const btn=document.getElementById('discoverBtn'),stat=document.getElementById('discoverStatus');
+  btn.disabled=true;btn.textContent='Searching…';stat.innerHTML='<em>Claude is searching the web…</em>';
+  try{
+    const res=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'discover',query:q,existing:awards.map(a=>a.name).join(', ')})});
+    const data=await res.json();
+    const text=data.content.filter(i=>i.type==='text').map(i=>i.text).join('\n');
+    let found;try{found=JSON.parse(text.replace(/```json|```/g,'').trim());}catch(pe){const m=text.match(/\[[\s\S]*\]/);if(!m)throw new Error('parse');found=JSON.parse(m[0]);}
+    const saved=await Promise.all(found.map(a=>fetch('/api/data?type=awards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:a.name,url:a.url,notes:a.notes,deadline:a.deadline,status:'researching'})}).then(res=>res.json())));
+    saved.forEach(a=>{a.requirements=[];});awards=[...awards,...saved];render();
+    document.getElementById('aiQuery').value='';
+    stat.innerHTML=`<strong style="color:var(--green)">✓ Added ${saved.length} award${saved.length!==1?'s':''}.</strong>`;
+    toast(saved.length+' awards discovered!');
+  }catch(e){console.error(e);stat.innerHTML='<span style="color:var(--red)">⚠ Search failed. Try different keywords.</span>';}
+  finally{btn.disabled=false;btn.textContent='Discover Awards';}
+}
+
+function dragOver(e){e.preventDefault();document.getElementById('uploadZone').classList.add('drag');}
+function dragLeave(){document.getElementById('uploadZone').classList.remove('drag');}
+function dropFile(e){e.preventDefault();document.getElementById('uploadZone').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)processManuscript(f);}
+function handleFileSelect(e){const f=e.target.files[0];if(f)processManuscript(f);}
+
+async function processManuscript(file){
+  const stat=document.getElementById('msStatus'),resEl=document.getElementById('msResult');
+  const isPDF=file.type==='application/pdf'||file.name.endsWith('.pdf'),isDOCX=file.name.endsWith('.docx');
+  if(!isPDF&&!isDOCX){toast('Please upload a .pdf or .docx file.');return;}
+  stat.innerHTML='<em>Reading manuscript…</em>';resEl.innerHTML='';
+  try{
+    let body;
+    if(isPDF){const b64=await fileToBase64(file);body={type:'manuscript',manuscriptBase64:b64,fileName:file.name};}
+    else{const text=await extractDocxText(file);body={type:'manuscript',manuscriptText:text.slice(0,12000),fileName:file.name};}
+    stat.innerHTML='<em>⏳ Claude is analysing your manuscript…</em>';
+    const res=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data=await res.json();
+    const text2=data.content.filter(i=>i.type==='text').map(i=>i.text).join('\n');
+    let parsed;try{parsed=JSON.parse(text2.replace(/```json|```/g,'').trim());}catch(pe){const m=text2.match(/\{[\s\S]*\}/);if(!m)throw new Error('parse');parsed=JSON.parse(m[0]);}
+    msAnalysis=parsed;renderMsResult(parsed,file.name);
+    stat.innerHTML='<strong style="color:var(--green)">✓ Analysis complete for "'+esc(file.name)+'"</strong>';
+    if(parsed.title&&parsed.title!=='Unknown')document.getElementById('bookTitle').textContent=parsed.title;
+  }catch(e){console.error(e);stat.innerHTML='<span style="color:var(--red)">⚠ Analysis failed. Check file format.</span>';}
+}
+
+function renderMsResult(data,fname){
+  const el=document.getElementById('msResult'),existing=awards.map(a=>a.name.toLowerCase());
+  const newOnes=(data.matchedAwards||[]).filter(a=>!existing.includes(a.name.toLowerCase()));
+  el.innerHTML=`<div class="ms-result"><h3>📊 Manuscript Analysis — ${esc(fname)}</h3>
+    <div class="ms-meta">
+      <div class="ms-meta-item"><div class="k">Title</div><div class="v">${esc(data.title||'—')}</div></div>
+      <div class="ms-meta-item"><div class="k">Word Count</div><div class="v">${esc(data.wordCount||'—')}</div></div>
+      <div class="ms-meta-item"><div class="k">Genres</div><div class="v">${(data.genres||[]).join(', ')||'—'}</div></div>
+      <div class="ms-meta-item"><div class="k">Audience</div><div class="v">${esc(data.audience||'—')}</div></div>
+    </div>
+    ${data.style?`<p style="font-size:.95rem;color:#444;margin-bottom:14px;padding:10px 14px;background:#f9f7f4;border-left:3px solid var(--accent)"><strong>Style:</strong> ${esc(data.style)}</p>`:''}
+    <div class="ms-awards-found"><h4>🏆 ${newOnes.length} New Matched Awards Found</h4>
+    ${newOnes.map((a,i)=>`<div class="ms-award-row"><div><div class="aw-name">${esc(a.name)}</div><div class="aw-match">↳ ${esc(a.matchReason||'')}</div></div><button class="btn btn-blue btn-sm" onclick="addMsAward(${i})">+ Add</button></div>`).join('')}
+    ${newOnes.length?`<button class="btn btn-blue btn-sm" style="margin-top:10px;width:100%;" onclick="addAllMsAwards()">+ Add All ${newOnes.length} Awards</button>`:''}
+    </div></div>`;
+  window._newMsAwards=newOnes;
+}
+
+async function addMsAward(idx){
+  const a=window._newMsAwards[idx];if(!a)return;
+  const res=await fetch('/api/data?type=awards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:a.name,url:a.url,notes:a.notes,deadline:a.deadline,status:'researching'})});
+  const newAward=await res.json();newAward.requirements=[];awards.push(newAward);
+  window._newMsAwards.splice(idx,1);render();toast('"'+a.name+'" added!');
+}
+
+async function addAllMsAwards(){
+  const toAdd=window._newMsAwards||[];if(!toAdd.length){toast('No new awards to add.');return;}
+  const saved=await Promise.all(toAdd.map(a=>fetch('/api/data?type=awards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:a.name,url:a.url,notes:a.notes,deadline:a.deadline,status:'researching'})}).then(res=>res.json())));
+  saved.forEach(a=>{a.requirements=[];});awards=[...awards,...saved];window._newMsAwards=[];render();toast(saved.length+' awards added!');
+}
+
+function openAddModal(){['fName','fUrl','fNotes','fDeadline'].forEach(id=>document.getElementById(id).value='');document.getElementById('fStatus').value='researching';document.getElementById('addOverlay').classList.add('open');}
+
+async function saveNewAward(){
+  const name=document.getElementById('fName').value.trim();if(!name){toast('Award name is required.');return;}
+  const res=await fetch('/api/data?type=awards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,url:document.getElementById('fUrl').value.trim(),notes:document.getElementById('fNotes').value.trim(),deadline:document.getElementById('fDeadline').value.trim(),status:document.getElementById('fStatus').value})});
+  const newAward=await res.json();newAward.requirements=[];awards.push(newAward);render();closeModal('addOverlay');toast('"'+name+'" added.');
+}
+
+function exportCSV(){
+  const rows=[['Name','URL','Status','Deadline','Notes','Reqs Done','Reqs Total']];
+  awards.forEach(a=>{const t=(a.requirements||[]).length,d=(a.requirements||[]).filter(r=>r.done).length;rows.push([a.name,a.url,a.status,a.deadline,a.notes,d,t]);});
+  const csv=rows.map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='award-tracker.csv';link.click();toast('CSV exported!');
+}
+
+function closeModal(id){document.getElementById(id).classList.remove('open');if(id==='reqOverlay')currentAwardId=null;}
+function maybeClose(e,id){if(e.target===document.getElementById(id))closeModal(id);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function isUrgent(d){
+  if(!d||['tbd','check','rolling'].some(k=>d.toLowerCase().includes(k)))return false;
+  const months=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const lower=d.toLowerCase(),mIdx=months.findIndex(m=>lower.includes(m));if(mIdx===-1)return false;
+  const dm=lower.match(/\d+/),day=dm?parseInt(dm[0]):1,dt=new Date(new Date().getFullYear(),mIdx,day);
+  return(dt-new Date())/864e5>=0&&(dt-new Date())/864e5<=45;
+}
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3500);}
+function fileToBase64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej(new Error('Read failed'));r.readAsDataURL(file);});}
+function extractDocxText(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=async e=>{try{const result=await mammoth.extractRawText({arrayBuffer:e.target.result});res(result.value);}catch(err){rej(err);}};r.onerror=()=>rej(new Error('DOCX read failed'));r.readAsArrayBuffer(file);});}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal('reqOverlay');closeModal('addOverlay');}});
+load();
+</script>
+</body>
+</html>
