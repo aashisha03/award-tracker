@@ -15,12 +15,12 @@ export default async function handler(req, res) {
         const records = await table.select().all();
         return res.json(records.map(r => ({
           id: r.id,
-          name: r.fields.name || '',
-          url: r.fields.url || '',
-          notes: r.fields.notes || '',
-          deadline: r.fields.deadline || '',
-          status: r.fields.status || 'researching',
-          requirements: []
+  name: r.fields.name || r.fields.Name || '',
+  url: r.fields.url || r.fields.URL || r.fields.Url || '',
+  notes: r.fields.notes || r.fields.Notes || '',
+  deadline: r.fields.deadline || r.fields.Deadline || '',
+  status: r.fields.status || r.fields.Status || 'researching',
+  requirements: []
         })));
       }
 
