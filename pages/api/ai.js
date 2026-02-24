@@ -52,11 +52,16 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'anthropic/claude-3-5-sonnet-latest',
         max_tokens: 2000,
-        messages: [{ role: 'user', content: prompt }]
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant. Always respond with valid JSON only. No markdown, no code fences, no explanation. Just the raw JSON.' },
+          { role: 'user', content: prompt }
+        ]
       })
     });
     const data = await response.json();
-    const text = data.choices?.[0]?.message?.content || '';
+    let text = data.choices?.[0]?.message?.content || '';
+    // Strip any markdown fences the model adds anyway
+    text = text.replace(/```json|```/g, '').trim();
     res.json({ content: [{ type: 'text', text }] });
   } catch(e) {
     res.status(500).json({ error: e.message });
