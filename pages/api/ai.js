@@ -1,76 +1,137 @@
 export const config = { api: { bodyParser: { sizeLimit: '15mb' } } };
 
+const OSV_URL = 'https://developer.osv.engineering/inference/v1/chat/completions';
+const MODEL   = 'anthropic/claude-3-5-sonnet-latest';
+const SYSTEM  = 'You are a helpful assistant. Always respond with valid JSON only. No markdown, no code fences, no explanation. Just the raw JSON.';
+
+// ── Shared fetch helper ────────────────────────────────────────────────────────
+// Throws a descriptive error when the OSV API returns a non-2xx status,
+// which previously caused `choices?.[0]?.message?.content` to silently become
+// undefined → JSON.parse('') → SyntaxError → frontend catch block fires.
+async function callOSV(messages, includeSystem = true) {
+  const body = {
+    model: MODEL,
+    max_tokens: 2000,
+    messages: includeSystem
+      ? [{ role: 'system', content: SYSTEM }, ...messages]
+      : messages,
+  };
+
+  const response = await fetch(OSV_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.ANTHROPIC_API_KEY}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  // ── This was the missing check. Without it, error responses (401, 429, 500)
+  //    were silently parsed as empty text, breaking every downstream JSON.parse.
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '(unreadable)');
+    throw new Error(`OSV API returned ${response.status}: ${errBody}`);
+  }
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content;
+
+  if (!text) {
+    throw new Error(`OSV API returned empty content. Full response: ${JSON.stringify(data)}`);
+  }
+
+  return text;
+}
+
+// ── Main handler ──────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
-  const { type, query, existing, awardName, awardUrl, manuscriptText, manuscriptBase64, fileName } = req.body;
 
-  let prompt;
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY is not set in Vercel environment variables.' });
+  }
 
-  if (type === 'discover') {
-    prompt = `Search the web for literary awards matching: "${query}"\n\nContext: indie publisher (Infinite Books), "White Mirror Stories" — SF/F short story collection.\nAlready tracking: ${existing}\n\nFind 3-5 NEW awards not in the list above. Return ONLY a JSON array (no markdown, no explanation):\n[{"name":"...","url":"...","notes":"2-3 sentences","deadline":"...","status":"researching"}]`;
-  }
-  else if (type === 'analyze') {
-    prompt = `Search the web for submission guidelines for "${awardName}" at ${awardUrl}.\n\nWe are an indie publisher submitting "White Mirror Stories" (SF/F short stories).\n\nExtract: entry fees, physical copies needed + address, digital requirements, supporting docs, eligibility, deadlines.\n\nReturn ONLY a JSON array (max 8 items, no markdown):\n[{"id":"1","text":"Actionable requirement","done":false}]`;
-  }
-  else if (type === 'manuscript') {
-    const content = manuscriptBase64
-      ? [
-          { type: 'image_url', image_url: { url: `data:application/pdf;base64,${manuscriptBase64}` } },
-          { type: 'text', text: msPrompt(fileName) }
-        ]
-      : [{ type: 'text', text: `MANUSCRIPT TEXT:\n\n${manuscriptText}\n\n---\n\n${msPrompt(fileName)}` }];
-
-    try {
-      const response = await fetch('https://developer.osv.engineering/inference/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.ANTHROPIC_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'anthropic/claude-3-5-sonnet-latest',
-          max_tokens: 2000,
-          messages: [{ role: 'user', content }]
-        })
-      });
-      const data = await response.json();
-      const text = data.choices?.[0]?.message?.content || '';
-      return res.json({ content: [{ type: 'text', text }] });
-    } catch(e) {
-      return res.status(500).json({ error: e.message });
-    }
-  }
-  else return res.status(400).json({ error: 'Invalid type' });
+  const {
+    type,
+    query, existing,
+    awardName, awardUrl,
+    manuscriptText, manuscriptBase64,
+    fileName,
+  } = req.body;
 
   try {
-    const response = await fetch('https://developer.osv.engineering/inference/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.ANTHROPIC_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'anthropic/claude-3-5-sonnet-latest',
-        max_tokens: 2000,
-        messages: [
-          { role: 'system', content: 'You are a helpful assistant. Always respond with valid JSON only. No markdown, no code fences, no explanation. Just the raw JSON.' },
-          { role: 'user', content: prompt }
-        ]
-      })
-    });
-    const data = await response.json();
-    let text = data.choices?.[0]?.message?.content || '';
-    // Strip any markdown fences the model adds anyway
-    text = text.replace(/```json|```/g, '').trim();
-    res.json({ content: [{ type: 'text', text }] });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
+    // ── Award Discovery ────────────────────────────────────────────────────
+    if (type === 'discover') {
+      const prompt =
+        `Find literary awards matching: "${query}"\n\n` +
+        `Context: indie publisher (Infinite Books), "White Mirror Stories" — SF/F short story collection.\n` +
+        `Already tracking: ${existing || 'none'}\n\n` +
+        `Return 3–5 NEW awards not already in the list above.\n` +
+        `JSON array only:\n` +
+        `[{"name":"...","url":"...","notes":"2-3 sentences on eligibility","deadline":"..."}]`;
+
+      const text = await callOSV([{ role: 'user', content: prompt }]);
+      return res.json({ content: [{ type: 'text', text }] });
+    }
+
+    // ── Award Requirements Analysis ────────────────────────────────────────
+    if (type === 'analyze') {
+      const prompt =
+        `List submission requirements for the literary award "${awardName}"` +
+        (awardUrl ? ` (${awardUrl})` : '') + `.\n\n` +
+        `Publisher context: indie (Infinite Books), submitting "White Mirror Stories" (SF/F short stories).\n` +
+        `Include: entry fees, physical copy requirements + mailing address, digital format, ` +
+        `supporting docs, eligibility rules, deadlines.\n\n` +
+        `JSON array, max 8 items:\n` +
+        `[{"id":"1","text":"Specific actionable requirement","done":false}]`;
+
+      const text = await callOSV([{ role: 'user', content: prompt }]);
+      return res.json({ content: [{ type: 'text', text }] });
+    }
+
+    // ── Manuscript Analysis ────────────────────────────────────────────────
+    if (type === 'manuscript') {
+      let content;
+
+      if (manuscriptBase64) {
+        // Send PDF as base64 image — works with vision-capable Claude models
+        // via OpenAI-compatible proxy. If your proxy does not support PDFs,
+        // upload the file as DOCX instead (which uses the text path below).
+        content = [
+          {
+            type: 'image_url',
+            image_url: { url: `data:application/pdf;base64,${manuscriptBase64}` },
+          },
+          { type: 'text', text: msPrompt(fileName) },
+        ];
+      } else {
+        // DOCX path: text was extracted client-side via mammoth
+        content = [{
+          type: 'text',
+          text: `MANUSCRIPT TEXT:\n\n${manuscriptText}\n\n---\n\n${msPrompt(fileName)}`,
+        }];
+      }
+
+      // System prompt omitted for vision messages (some proxies reject it with multimodal)
+      const text = await callOSV([{ role: 'user', content }], false);
+      return res.json({ content: [{ type: 'text', text }] });
+    }
+
+    return res.status(400).json({ error: `Unknown type: "${type}"` });
+
+  } catch (e) {
+    console.error(`[api/ai] type="${type}" error:`, e.message);
+    return res.status(500).json({ error: e.message });
   }
 }
 
 function msPrompt(fname) {
-  return `Analyse this manuscript ("${fname}") for an indie publisher seeking literary awards.
-Then search the web for 4-6 awards that best match this specific manuscript.
-Return ONLY valid JSON (no markdown):
-{"title":"...","genres":["..."],"themes":["..."],"style":"...","audience":"...","wordCount":"...","matchedAwards":[{"name":"...","url":"...","notes":"...","deadline":"...","matchReason":"...","status":"researching"}]}`;
+  return (
+    `Analyse this manuscript ("${fname}") for an indie publisher seeking literary awards.\n` +
+    `Then suggest 4–6 real awards that best match its genre, themes, length, and publisher type.\n\n` +
+    `Return ONLY valid JSON (no markdown fences):\n` +
+    `{"title":"...","genres":["..."],"themes":["..."],"style":"...","audience":"...",` +
+    `"wordCount":"...","matchedAwards":[{"name":"...","url":"...","notes":"...",` +
+    `"deadline":"...","matchReason":"..."}]}`
+  );
 }
