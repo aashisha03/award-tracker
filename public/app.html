@@ -418,6 +418,11 @@ async function processManuscript(file) {
     msAnalysis=parsed;renderMsResult(parsed,file.name);
     stat.innerHTML='<strong style="color:var(--green)">✓ Analysis complete for "'+esc(file.name)+'"</strong>';
     if(parsed.title&&parsed.title!=='Unknown')document.getElementById('bookTitle').textContent=parsed.title;
+    if(parsed.genres&&parsed.genres.length){
+  document.getElementById('bookTags').innerHTML=
+    parsed.genres.map(g=>`<span class="tag">${esc(g)}</span>`).join('')+
+    '<span class="tag acc">Indie Publisher</span>';
+}
   }catch(e){console.error(e);stat.innerHTML='<span style="color:var(--red)">⚠ Analysis failed: '+esc(e.message)+'</span>';}
 }
 
