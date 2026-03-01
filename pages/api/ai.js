@@ -1,7 +1,7 @@
 export const config = { api: { bodyParser: { sizeLimit: '15mb' } } };
 
 const OSV_URL = 'https://developer.osv.engineering/inference/v1/chat/completions';
-const MODEL   = 'anthropic/claude-3-5-sonnet-latest';
+const MODEL   = 'anthropic/claude-3-5-sonnet-20241022';
 const SYSTEM  = 'You are a helpful assistant. Always respond with valid JSON only. No markdown, no code fences, no explanation. Just the raw JSON.';
 
 // ── Shared fetch helper ────────────────────────────────────────────────────────
