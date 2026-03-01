@@ -92,7 +92,7 @@ body{font-family:'Crimson Pro',serif;background:var(--page);color:var(--ink);lin
   text-align:center;cursor:pointer;
   transition:all .2s;
   border-radius:8px;
-  margin-bottom:14px;
+  margin-bottom:14px;display:block;width:100%;
 }
 .upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:rgba(45,91,227,.1);}
 .upload-zone .upload-icon{font-size:2.8rem;margin-bottom:10px;}
@@ -132,7 +132,7 @@ input[type="file"]{display:none;}
 .btn-sm{padding:7px 14px;font-size:.7rem;}
 
 // ── STATS BAR — filled colourful blocks ── 
-.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px;margin-bottom:28px;}
+.stats-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px;}
 .stat-box{
   background:var(--ink);
   color:white;
