@@ -7,7 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <style>
-  /* ── Paste this entire block between your <style> and </style> tags ── */
 
 :root {
   --ink: #0f1626;
@@ -42,7 +41,6 @@ body{font-family:'Crimson Pro',serif;background:var(--page);color:var(--ink);lin
 .site-header .sub{font-family:'Space Mono',monospace;font-size:.8rem;color:var(--accent);text-transform:uppercase;letter-spacing:.2em;margin-top:10px;}
 .site-header::after{display:none;}
 
-/* ── BOOK CARD ── */
 .book-card{
   display:flex;align-items:center;gap:24px;
   background:var(--card);
@@ -57,7 +55,7 @@ body{font-family:'Crimson Pro',serif;background:var(--page);color:var(--ink);lin
 .book-info .title{font-size:1.9rem;font-weight:700;}
 .book-info .publisher{font-family:'Space Mono',monospace;font-size:.8rem;color:var(--muted);margin:4px 0 14px;}
 
-/* ── TAGS — colourful rounded pills ── */
+
 .tags{display:flex;flex-wrap:wrap;gap:8px;}
 .tag{
   padding:5px 15px;
@@ -75,7 +73,7 @@ body{font-family:'Crimson Pro',serif;background:var(--page);color:var(--ink);lin
 .tag:nth-child(5n){background:var(--ink);}
 .tag.acc{background:var(--accent);}
 
-/* ── PANELS ── */
+// ── PANELS ── 
 .panel{padding:28px 32px;margin-bottom:24px;position:relative;border-radius:4px;}
 .panel h2{font-size:1.3rem;font-weight:700;display:flex;align-items:center;gap:10px;margin-bottom:8px;}
 .panel p{color:#555;font-size:1rem;margin-bottom:14px;}
@@ -86,7 +84,7 @@ body{font-family:'Crimson Pro',serif;background:var(--page);color:var(--ink);lin
 .badge-blue{background:var(--blue);}
 .badge-accent{background:var(--accent);}
 
-/* ── UPLOAD ZONE ── */
+// ── UPLOAD ZONE ── 
 .upload-zone{
   border:2px dashed var(--blue);
   background:rgba(45,91,227,.04);
@@ -102,7 +100,7 @@ body{font-family:'Crimson Pro',serif;background:var(--page);color:var(--ink);lin
 .upload-zone strong{color:var(--blue);}
 input[type="file"]{display:none;}
 
-/* ── MS RESULT ── */
+// ── MS RESULT ──
 .ms-result{background:white;border-left:4px solid var(--blue);padding:22px 24px;border-radius:2px;margin-bottom:14px;box-shadow:0 2px 16px rgba(0,0,0,.07);}
 .ms-result h3{font-size:1.15rem;font-weight:700;margin-bottom:12px;color:var(--ink);}
 .ms-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px;}
@@ -114,13 +112,13 @@ input[type="file"]{display:none;}
 .ms-award-row .aw-name{flex:1;font-weight:700;}
 .ms-award-row .aw-match{font-family:'Space Mono',monospace;font-size:.72rem;color:var(--green);}
 
-/* ── SEARCH ── */
+// ── SEARCH ── 
 .search-row{display:flex;gap:10px;}
 .search-row input{flex:1;padding:13px 18px;border:2px solid var(--border);font-family:'Crimson Pro',serif;font-size:1rem;background:white;transition:border-color .2s;border-radius:4px;}
 .search-row input:focus{outline:none;border-color:var(--accent);}
 .status-line{margin-top:10px;font-size:.9rem;color:var(--muted);min-height:20px;}
 
-/* ── BUTTONS ── */
+// ── BUTTONS ── 
 .btn{padding:11px 22px;border:none;font-family:'Space Mono',monospace;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;transition:all .2s;white-space:nowrap;border-radius:4px;}
 .btn-primary{background:var(--ink);color:white;}
 .btn-primary:hover:not(:disabled){background:var(--accent);transform:translateY(-2px);box-shadow:0 4px 14px rgba(232,65,107,.35);}
@@ -133,7 +131,7 @@ input[type="file"]{display:none;}
 .btn-danger{background:var(--red);color:white;}
 .btn-sm{padding:7px 14px;font-size:.7rem;}
 
-/* ── STATS BAR — filled colourful blocks ── */
+// ── STATS BAR — filled colourful blocks ── 
 .stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px;margin-bottom:28px;}
 .stat-box{
   background:var(--ink);
@@ -153,18 +151,18 @@ input[type="file"]{display:none;}
 .cr{background:var(--red);}
 .cg .num,.cy .num,.cr .num{color:white;}
 
-/* ── TABS ── */
+// ── TABS ── 
 .tab-bar{display:flex;gap:2px;border-bottom:3px solid var(--border);margin-bottom:22px;overflow-x:auto;}
 .tab-btn{padding:11px 20px;background:transparent;border:none;border-bottom:3px solid transparent;margin-bottom:-3px;font-family:'Space Mono',monospace;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;color:var(--muted);transition:all .15s;white-space:nowrap;}
 .tab-btn:hover{color:var(--ink);background:rgba(232,65,107,.06);}
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
 
-/* ── TOOLBAR ── */
+// ── TOOLBAR ── 
 .toolbar{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
 .toolbar input[type="search"]{padding:10px 14px;border:2px solid var(--border);font-family:'Crimson Pro',serif;font-size:.95rem;background:white;min-width:200px;flex:1;border-radius:4px;}
 .toolbar input[type="search"]:focus{outline:none;border-color:var(--accent);}
 
-/* ── AWARD CARDS ── */
+// ── AWARD CARDS ── 
 .awards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;}
 .award-card{
   background:var(--card);
@@ -178,7 +176,7 @@ input[type="file"]{display:none;}
 }
 .award-card:hover{border-top-color:var(--accent);box-shadow:0 10px 32px rgba(15,22,38,.13);transform:translateY(-4px);}
 
-/* Colour-code card tops by status */
+// Colour-code card tops by status 
 .award-card:has(.dot-eligible){border-top-color:var(--green);}
 .award-card:has(.dot-submitted){border-top-color:var(--yellow);}
 .award-card:has(.dot-ineligible){border-top-color:var(--red);}
@@ -204,7 +202,7 @@ input[type="file"]{display:none;}
 .req-bar{height:5px;background:var(--border);border-radius:3px;margin-bottom:10px;overflow:hidden;}
 .req-bar-fill{height:100%;background:var(--green);border-radius:3px;transition:width .4s;}
 
-/* ── EMPTY & LOADER ── */
+// ── EMPTY & LOADER ── 
 .empty{text-align:center;padding:60px 24px;color:var(--muted);grid-column:1/-1;}
 .empty h3{font-size:1.5rem;margin-bottom:10px;color:var(--ink);}
 .page-loader{text-align:center;padding:80px 24px;grid-column:1/-1;}
@@ -213,7 +211,7 @@ input[type="file"]{display:none;}
 .spinner-wrap{text-align:center;padding:32px;color:var(--muted);}
 .spinner-wrap .spinner{display:block;margin:0 auto 14px;}
 
-/* ── MODALS ── */
+// ── MODALS ── 
 .overlay{display:none;position:fixed;inset:0;background:rgba(15,22,38,.82);z-index:900;align-items:center;justify-content:center;padding:20px;}
 .overlay.open{display:flex;}
 .modal{background:white;border:none;box-shadow:0 24px 64px rgba(15,22,38,.35);width:100%;max-width:700px;max-height:92vh;overflow-y:auto;animation:slideUp .25s;border-radius:8px;overflow:hidden;}
@@ -228,7 +226,7 @@ input[type="file"]{display:none;}
 .modal-footer{display:flex;gap:10px;padding:0 28px 28px;flex-wrap:wrap;}
 .modal-footer .btn{flex:1;min-width:110px;}
 
-/* ── CHECKLIST ── */
+// ── CHECKLIST ── 
 .checklist{list-style:none;margin-bottom:18px;}
 .checklist li{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-left:3px solid var(--border);background:#faf9f7;margin-bottom:6px;transition:border-color .2s;cursor:pointer;user-select:none;border-radius:2px;}
 .checklist li:hover{border-left-color:var(--accent);}
@@ -241,18 +239,18 @@ input[type="file"]{display:none;}
 .add-req-row input:focus{outline:none;border-color:var(--accent);}
 .progress-info{padding:12px 16px;background:#f0f7f2;border-left:3px solid var(--green);font-family:'Space Mono',monospace;font-size:.78rem;margin-top:14px;border-radius:2px;}
 
-/* ── FORM ── */
+// ── FORM ── 
 .form-row{margin-bottom:16px;}
 .form-row label{display:block;font-family:'Space Mono',monospace;font-size:.75rem;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
 .form-row input,.form-row textarea,.form-row select{width:100%;padding:10px 14px;border:2px solid var(--border);font-family:'Crimson Pro',serif;font-size:1rem;background:white;border-radius:4px;}
 .form-row input:focus,.form-row textarea:focus{outline:none;border-color:var(--accent);}
 .form-row textarea{min-height:80px;resize:vertical;}
 
-/* ── TOAST ── */
+// ── TOAST ── 
 .toast{position:fixed;bottom:28px;right:28px;background:var(--ink);color:white;padding:14px 22px;font-family:'Space Mono',monospace;font-size:.78rem;z-index:9999;box-shadow:0 8px 28px rgba(0,0,0,.3);border-left:4px solid var(--accent);animation:toastIn .3s;max-width:320px;border-radius:4px;}
 @keyframes toastIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
 
-/* ── RESPONSIVE ── */
+// ── RESPONSIVE ── 
 @media(max-width:640px){
   .awards-grid{grid-template-columns:1fr;}
   .search-row{flex-direction:column;}
@@ -342,7 +340,7 @@ input[type="file"]{display:none;}
   </div>
 </div>
 
-<!-- Add Modal -->
+</-- Add Modal -->
 <div class="overlay" id="addOverlay" onclick="maybeClose(event,'addOverlay')">
   <div class="modal modal-sm">
     <div class="modal-head"><h2>Add Award Manually</h2></div>
