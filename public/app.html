@@ -159,9 +159,9 @@ input[type="file"]{display:none;}
     <div class="upload-zone" id="uploadZone" onclick="document.getElementById('msFile').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
       <div class="upload-icon">📂</div>
       <p><strong>Click to upload</strong> or drag & drop</p>
-      <p>Supports .PDF and .DOCX</p>
+      <p>Supports PDF, DOCX, TXT, RTF, HTML, MD, ODT</p>
     </div>
-    <input type="file" id="msFile" accept=".pdf,.docx" onchange="handleFileSelect(event)">
+    <input type="file" id="msFile" accept=".pdf,.docx,.txt,.rtf,.html,.htm,.md,.odt" onchange="handleFileSelect(event)">
     <div id="msStatus" class="status-line"></div>
     <div id="msResult"></div>
   </div>
@@ -386,24 +386,39 @@ function dragLeave(){document.getElementById('uploadZone').classList.remove('dra
 function dropFile(e){e.preventDefault();document.getElementById('uploadZone').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)processManuscript(f);}
 function handleFileSelect(e){const f=e.target.files[0];if(f)processManuscript(f);}
 
-async function processManuscript(file){
+async function processManuscript(file) {
   const stat=document.getElementById('msStatus'),resEl=document.getElementById('msResult');
-  const isPDF=file.type==='application/pdf'||file.name.endsWith('.pdf'),isDOCX=file.name.endsWith('.docx');
-  if(!isPDF&&!isDOCX){toast('Please upload a .pdf or .docx file.');return;}
+  const ext=file.name.split('.').pop().toLowerCase();
+  const supported=['pdf','docx','txt','rtf','html','htm','md','odt'];
+  if(!supported.includes(ext)){toast('Unsupported file type: .'+ext+'. Try: '+supported.join(', '));return;}
   stat.innerHTML='<em>Reading manuscript…</em>';resEl.innerHTML='';
   try{
-    let body;
-    if(isPDF){const b64=await fileToBase64(file);body={type:'manuscript',manuscriptBase64:b64,fileName:file.name};}
-    else{const text=await extractDocxText(file);body={type:'manuscript',manuscriptText:text.slice(0,12000),fileName:file.name};}
+    let manuscriptText='';
+    if(ext==='pdf'){
+      stat.innerHTML='<em>Extracting PDF text…</em>';
+      manuscriptText=await extractPdfText(file);
+    } else if(ext==='docx'){
+      manuscriptText=await extractDocxText(file);
+    } else if(ext==='rtf'){
+      const raw=await readAsText(file);
+      // Strip RTF control codes to get readable text
+      manuscriptText=raw.replace(/\\\w+\s?/g,' ').replace(/[{}]/g,'').replace(/\s+/g,' ').trim();
+    } else {
+      // TXT, HTML, HTM, MD, ODT — read as plain text
+      manuscriptText=await readAsText(file);
+    }
+    if(!manuscriptText.trim()){toast('Could not extract text from this file.');return;}
+    const body={type:'manuscript',manuscriptText:manuscriptText.slice(0,12000),fileName:file.name};
     stat.innerHTML='<em>⏳ Claude is analysing your manuscript…</em>';
     const res=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await res.json();
+    if(!res.ok||data.error)throw new Error(data.error||'API error '+res.status);
     const text2=data.content.filter(i=>i.type==='text').map(i=>i.text).join('\n');
     let parsed;try{parsed=JSON.parse(text2.replace(/```json|```/g,'').trim());}catch(pe){const m=text2.match(/\{[\s\S]*\}/);if(!m)throw new Error('parse');parsed=JSON.parse(m[0]);}
     msAnalysis=parsed;renderMsResult(parsed,file.name);
     stat.innerHTML='<strong style="color:var(--green)">✓ Analysis complete for "'+esc(file.name)+'"</strong>';
     if(parsed.title&&parsed.title!=='Unknown')document.getElementById('bookTitle').textContent=parsed.title;
-  }catch(e){console.error(e);stat.innerHTML='<span style="color:var(--red)">⚠ Analysis failed. Check file format.</span>';}
+  }catch(e){console.error(e);stat.innerHTML='<span style="color:var(--red)">⚠ Analysis failed: '+esc(e.message)+'</span>';}
 }
 
 function renderMsResult(data,fname){
