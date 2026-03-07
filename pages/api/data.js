@@ -80,6 +80,7 @@ export default async function handler(req, res) {
           [AW.notes]:    notes    || '',
           [AW.deadline]: deadline || '',
           [AW.status]:   status   || 'researching',
+          [AW.searchTag]: searchTag || '',
         });
         // Use the shared mapper — previously this read record.fields.name directly,
         // which returned undefined if your Airtable column is capitalised ("Name").
