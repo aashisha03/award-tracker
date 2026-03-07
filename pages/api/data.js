@@ -33,6 +33,7 @@ function mapAward(r) {
     notes:    f[AW.notes]    || f.Notes    || '',
     deadline: f[AW.deadline] || f.Deadline || '',
     status:   f[AW.status]   || f.Status   || 'researching',
+    searchTag: f[AW.searchTag] || f.SearchTag || '',
     requirements: [],
   };
 }
