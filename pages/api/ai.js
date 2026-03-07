@@ -20,7 +20,6 @@ messages: systemPrompt
     method: 'POST',
     'Content-Type': 'application/json',
 'Authorization': `Bearer ${process.env.OSV_API_KEY}`,
-      'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify(body),
   });
