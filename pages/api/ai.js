@@ -37,7 +37,7 @@ async function callClaude(messages, systemPrompt, maxTokens = 1500) {
 async function searchWeb(query, categories = 'general', engines = 'google,bing,duckduckgo') {
   const params = new URLSearchParams({ q: query, format: 'json', categories, engines, language: 'en-US' });
   const r = await fetch(`${SEARCH_URL}?${params}`, {
-    headers: { Authorization: `Bearer ${process.env.ANTHROPIC_API_KEY}` },
+    headers: { Authorization: `Bearer ${process.env.OSV_API_KEY}` },
   });
   if (!r.ok) {
     const t = await r.text().catch(() => '(unreadable)');
@@ -51,7 +51,7 @@ async function crawlSite(url) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.ANTHROPIC_API_KEY}`,
+      Authorization: `Bearer ${process.env.OSV_API_KEY}`,
     },
     body: JSON.stringify({
       url,
@@ -80,7 +80,7 @@ async function extractPage(url) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.ANTHROPIC_API_KEY}`,
+      Authorization: `Bearer ${process.env.OSV_API_KEY}`,
     },
     body: JSON.stringify({
       url,
