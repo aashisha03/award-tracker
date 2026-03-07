@@ -18,6 +18,7 @@ messages: systemPrompt
   };
   const r = await fetch(CLAUDE_URL, {
     method: 'POST',
+    headers: {   
     'Content-Type': 'application/json',
 'Authorization': `Bearer ${process.env.OSV_API_KEY}`,
     },
