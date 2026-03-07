@@ -10,6 +10,7 @@ const AW = {
   notes:    'notes',
   deadline: 'deadline',
   status:   'status',
+  searchTag: 'searchTag', 
 };
 const RQ = {
   awardId: 'awardId',
@@ -72,7 +73,7 @@ export default async function handler(req, res) {
       }
 
       if (req.method === 'POST') {
-        const { name, url, notes, deadline, status } = req.body;
+        const { name, url, notes, deadline, status, searchTag } = req.body;
         const record = await table.create({
           [AW.name]:     name,
           [AW.url]:      url      || '',
