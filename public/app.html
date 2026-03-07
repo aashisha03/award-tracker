@@ -296,6 +296,7 @@ function renderAwards() {
     return `<div class="award-card">
       <div class="status-dot dot-${a.status}"></div>
       <div class="aw-name">${esc(a.name)}</div>
+${a.searchTag?`<div style="margin-bottom:6px;"><span style="background:#eae8f8;color:#3b1f5e;padding:3px 10px;font-size:.68rem;font-family:'Nunito',sans-serif;border-radius:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">🔍 ${esc(a.searchTag)}</span></div>`:''}
       ${a.url?`<div class="url-line"><a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.url)}</a></div>`:''}
       <div class="notes">${esc(a.notes||'—')}</div>
       ${a.deadline?`<div class="deadline-pill${urg?' urgent':''}">${urg?'⚠ ':''}<strong>Deadline:</strong> ${esc(a.deadline)}</div>`:''}
@@ -382,7 +383,7 @@ async function discoverAwards(){
     if(!res.ok||data.error)throw new Error(data.error||'API error '+res.status);
     const text=data.content.filter(i=>i.type==='text').map(i=>i.text).join('\n');
     let found;try{found=JSON.parse(text.replace(/```json|```/g,'').trim());}catch(pe){const m=text.match(/\[[\s\S]*\]/);if(!m)throw new Error('parse');found=JSON.parse(m[0]);}
-    const saved=await Promise.all(found.map(a=>fetch('/api/data?type=awards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:a.name,url:a.url,notes:a.notes,deadline:a.deadline,status:'researching'})}).then(res=>res.json())));
+    const saved=await Promise.all(found.map(a=>fetch('/api/data?type=awards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:a.name,url:a.url,notes:a.notes,deadline:a.deadline,status:a.status||'researching',searchTag:q})}).then(res=>res.json())));
     saved.forEach(a=>{a.requirements=[];});awards=[...awards,...saved];render();
     document.getElementById('aiQuery').value='';
     stat.innerHTML=`<strong style="color:var(--green)">✓ Added ${saved.length} award${saved.length!==1?'s':''}.</strong>`;
