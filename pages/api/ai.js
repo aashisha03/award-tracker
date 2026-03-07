@@ -202,6 +202,7 @@ Select 3-6 results that are REAL literary award opportunities (not listicles, no
     "url": "direct URL to the award/submission page",
     "notes": "2-3 sentences on eligibility and fit for this book",
     "deadline": "deadline if visible in snippet, else 'Check website'"
+"status": "eligible if book clearly qualifies, ineligible if it clearly does not, researching if unsure"
   }
 ]
 
