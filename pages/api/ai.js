@@ -1,7 +1,7 @@
 export const config = { api: { bodyParser: { sizeLimit: '15mb' } } };
 
 const CLAUDE_URL = 'https://developer.osv.engineering/inference/v1/chat/completions';
-const CLAUDE_MODEL = 'anthropic/claude-3-5-sonnet-latest';
+const CLAUDE_MODEL = 'anthropic/claude-sonnet-4-5-20250929';
 const SEARCH_URL = 'https://developer.osv.engineering/alpha/web/search';
 const CRAWL_URL  = 'https://developer.osv.engineering/web/crawl';
 const EXTRACT_URL = 'https://developer.osv.engineering/web/extract';
