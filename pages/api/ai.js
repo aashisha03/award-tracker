@@ -1,7 +1,7 @@
 export const config = { api: { bodyParser: { sizeLimit: '15mb' } } };
 
-const CLAUDE_URL = 'https://api.anthropic.com/v1/messages';
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+const CLAUDE_URL = 'https://developer.osv.engineering/inference/v1/chat/completions';
+const CLAUDE_MODEL = 'anthropic/claude-3-5-sonnet-latest';
 const SEARCH_URL = 'https://developer.osv.engineering/alpha/web/search';
 const CRAWL_URL  = 'https://developer.osv.engineering/web/crawl';
 const EXTRACT_URL = 'https://developer.osv.engineering/web/extract';
@@ -11,15 +11,15 @@ const EXTRACT_URL = 'https://developer.osv.engineering/web/extract';
 async function callClaude(messages, systemPrompt, maxTokens = 1500) {
   const body = {
     model: CLAUDE_MODEL,
-    max_tokens: maxTokens,
-    system: systemPrompt || 'You are a helpful assistant. Always respond with valid JSON only. No markdown fences, no explanation.',
-    messages,
+max_tokens: maxTokens,
+messages: systemPrompt 
+  ? [{ role: 'system', content: systemPrompt || 'You are a helpful assistant. Always respond with valid JSON only. No markdown fences, no explanation.' }, ...messages]
+  : messages,
   };
   const r = await fetch(CLAUDE_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
+    'Content-Type': 'application/json',
+'Authorization': `Bearer ${process.env.OSV_API_KEY}`,
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify(body),
@@ -29,8 +29,8 @@ async function callClaude(messages, systemPrompt, maxTokens = 1500) {
     throw new Error(`Claude API ${r.status}: ${t}`);
   }
   const data = await r.json();
-  const text = data.content?.find(b => b.type === 'text')?.text;
-  if (!text) throw new Error('Claude returned empty content');
+  const text = data.choices?.[0]?.message?.content;
+if (!text) throw new Error('Claude returned empty content');
   return text;
 }
 
