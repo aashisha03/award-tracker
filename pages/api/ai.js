@@ -147,9 +147,9 @@ Generate 4-6 targeted search queries that would find real literary awards matchi
 }
 
 // STEP 1b: For discover mode, generate search queries from a user query string
-async function step1b_discoverQueries(query) {
+async function step1b_discoverQueries(query, bookTitle) {
   const prompt = `Generate 4-6 targeted web search queries to find literary awards matching this description: "${query}"
-Context: indie publisher (Infinite Books), "White Mirror Stories" — SF/F short story collection.
+Context: indie publisher (Infinite Books), "${bookTitle || 'Unknown Title'}" — SF/F short story collection.
 
 Return JSON array of search query strings only:
 ["query1", "query2", "query3", "query4"]
@@ -213,13 +213,13 @@ Only include awards that genuinely accept indie-published or small-press short f
 }
 
 // STEP 4: Crawl each award site and extract submission requirements via Claude
-async function step4_extractRequirements(award) {
+async function step4_extractRequirements(award, bookTitle) {
   const pageText = await getAwardPageText(award.url);
 
   if (!pageText || pageText.length < 100) {
     // No crawl data — Claude uses its knowledge
     const prompt = `List submission requirements for the literary award "${award.name}" (${award.url}).
-Publisher: indie (Infinite Books). Book: "White Mirror Stories" (SF/F short stories).
+Publisher: indie (Infinite Books). Book: "${bookTitle || 'Unknown Title'}" (SF/F short stories).
 Include: entry fees, physical/digital submission format, word count limits, eligibility rules, deadline, supporting docs.
 JSON array, max 8 items: [{"id":"1","text":"Specific actionable requirement","done":false}]`;
     const text = await callClaude([{ role: 'user', content: prompt }], null, 1000);
@@ -231,7 +231,7 @@ JSON array, max 8 items: [{"id":"1","text":"Specific actionable requirement","do
 CRAWLED CONTENT:
 ${pageText}
 
-Extract all submission requirements and process details relevant to an indie publisher submitting "White Mirror Stories" (SF/F short story collection).
+Extract all submission requirements and process details relevant to an indie publisher submitting "${bookTitle || 'Unknown Title'}" (SF/F short story collection).
 
 Include: entry fees, physical copy requirements + mailing address, digital format specs, word count limits, eligibility rules, important deadlines, required supporting documents, judge/jury info if present.
 
@@ -253,14 +253,14 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'ANTHROPIC_API_KEY is not set.' });
   }
 
-  const { type, query, existing, awardName, awardUrl, manuscriptText, fileName } = req.body;
+  const { type, query, existing, awardName, awardUrl, manuscriptText, fileName, projectName, bookTitle } = req.body;
 
   try {
 
     // ── DISCOVER: User types a description → full pipeline ─────────────────
     if (type === 'discover') {
       // 1. Generate search queries
-      const queries = await step1b_discoverQueries(query);
+      const queries = await step1b_discoverQueries(query, bookTitle);
       console.log('[discover] queries:', queries);
 
       // 2. Search the web
@@ -268,7 +268,7 @@ export default async function handler(req, res) {
       console.log('[discover] raw results:', rawResults.length);
 
       // 3. Filter with Claude
-      const filtered = await step3_filterAwards(rawResults, { title: 'White Mirror Stories', genres: ['Science Fiction', 'Fantasy', 'Short Stories'] }, existing);
+      const filtered = await step3_filterAwards(rawResults, { title: bookTitle || 'Unknown Title', genres: ['Science Fiction', 'Fantasy', 'Short Stories'] }, existing);
       console.log('[discover] filtered awards:', filtered.length);
 
       return res.json({ content: [{ type: 'text', text: JSON.stringify(filtered) }] });
@@ -276,7 +276,7 @@ export default async function handler(req, res) {
 
     // ── ANALYZE: Fetch & extract requirements for a known award ────────────
     if (type === 'analyze') {
-      const reqs = await step4_extractRequirements({ name: awardName, url: awardUrl });
+      const reqs = await step4_extractRequirements({ name: awardName, url: awardUrl }, bookTitle);
       return res.json({ content: [{ type: 'text', text: JSON.stringify(reqs) }] });
     }
 
