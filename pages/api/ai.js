@@ -6,7 +6,7 @@ const SEARCH_URL = 'https://developer.osv.engineering/alpha/web/search';
 const CRAWL_URL  = 'https://developer.osv.engineering/web/crawl';
 const EXTRACT_URL = 'https://developer.osv.engineering/web/extract';
 
-// ── Shared helpers ─────────────────────────────────────────────────────────────
+// ââ Shared helpers âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 async function callClaude(messages, systemPrompt, maxTokens = 1500) {
   const body = {
@@ -116,7 +116,7 @@ function safeParseJSON(text) {
   }
 }
 
-// ── Pipeline steps ─────────────────────────────────────────────────────────────
+// ââ Pipeline steps âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 // STEP 1: Extract book metadata + search query categories from description/manuscript
 async function step1_analyzeBook(input) {
@@ -147,14 +147,17 @@ Generate 4-6 targeted search queries that would find real literary awards matchi
 }
 
 // STEP 1b: For discover mode, generate search queries from a user query string
-async function step1b_discoverQueries(query, bookTitle) {
-  const prompt = `Generate 4-6 targeted web search queries to find literary awards matching this description: "${query}"
-Context: indie publisher (Infinite Books), "${bookTitle || 'Unknown Title'}" — SF/F short story collection.
+async function step1b_discoverQueries(query, bookTitle, projectType, projectDescription) {
+  const context = projectDescription
+    ? `Project: "${bookTitle || 'Untitled'}" (${projectType || 'book'}). Details: ${projectDescription}`
+    : `Project: "${bookTitle || 'Untitled'}" (${projectType || 'book'}).`;
+  const prompt = `Generate 4-6 targeted web search queries to find literary awards matching this user query: "${query}"
+${context}
 
 Return JSON array of search query strings only:
 ["query1", "query2", "query3", "query4"]
 
-Make queries specific: include award type, genre, year (2025 or 2026), submission status.`;
+Make queries specific and diverse: include the genre/category from the user query, award type, year (2025 or 2026), and submission status. Do NOT restrict to any single genre â match the user's query.`;
 
   const text = await callClaude([{ role: 'user', content: prompt }], null, 600);
   return safeParseJSON(text);
@@ -182,31 +185,32 @@ async function step2_searchAwards(queries) {
 
 // STEP 3: Claude filters search results to identify real award pages
 async function step3_filterAwards(searchResults, bookMeta, existing) {
+  const genres = (bookMeta.genres || []).join(', ') || 'general';
   const prompt = `You are a literary awards expert. Here are web search results that may contain literary award opportunities.
 
-BOOK CONTEXT:
-- Title: ${bookMeta.title || 'White Mirror Stories'}
-- Genres: ${(bookMeta.genres || ['SF/F', 'Short Stories']).join(', ')}
-- Publisher: Indie (Infinite Books)
-- Format: Short story collection
+PROJECT CONTEXT:
+- Title: ${bookMeta.title || 'Unknown'}
+- Genres/Categories: ${genres}
+${bookMeta.projectType ? `- Type: ${bookMeta.projectType}` : ''}
+${bookMeta.projectDescription ? `- Description: ${bookMeta.projectDescription}` : ''}
 
 ALREADY TRACKING (exclude these): ${existing || 'none'}
 
 SEARCH RESULTS:
 ${JSON.stringify(searchResults.slice(0, 30), null, 2)}
 
-Select 3-6 results that are REAL literary award opportunities (not listicles, not blogs about awards, not eligibility guides). For each, produce:
+Select 3-8 results that are REAL literary award opportunities (not listicles, not blogs about awards, not eligibility guides). For each, produce:
 [
   {
     "name": "Official Award Name",
     "url": "direct URL to the award/submission page",
-    "notes": "2-3 sentences on eligibility and fit for this book",
-    "deadline": "deadline if visible in snippet, else 'Check website'"
-"status": "eligible if book clearly qualifies, ineligible if it clearly does not, researching if unsure"
+    "notes": "2-3 sentences on eligibility and fit",
+    "deadline": "deadline if visible in snippet, else 'Check website'",
+    "status": "eligible if book clearly qualifies, ineligible if it clearly does not, researching if unsure"
   }
 ]
 
-Only include awards that genuinely accept indie-published or small-press short fiction/SF/F. Return JSON array only.`;
+Include awards that match the genres/categories above. Be inclusive â if an award plausibly fits, include it with status "researching". Return JSON array only.`;
 
   const text = await callClaude([{ role: 'user', content: prompt }], null, 1500);
   return safeParseJSON(text);
@@ -217,9 +221,9 @@ async function step4_extractRequirements(award, bookTitle) {
   const pageText = await getAwardPageText(award.url);
 
   if (!pageText || pageText.length < 100) {
-    // No crawl data — Claude uses its knowledge
+    // No crawl data â Claude uses its knowledge
     const prompt = `List submission requirements for the literary award "${award.name}" (${award.url}).
-Publisher: indie (Infinite Books). Book: "${bookTitle || 'Unknown Title'}" (SF/F short stories).
+Project: "${bookTitle || 'Unknown Title'}".
 Include: entry fees, physical/digital submission format, word count limits, eligibility rules, deadline, supporting docs.
 JSON array, max 8 items: [{"id":"1","text":"Specific actionable requirement","done":false}]`;
     const text = await callClaude([{ role: 'user', content: prompt }], null, 1000);
@@ -231,7 +235,7 @@ JSON array, max 8 items: [{"id":"1","text":"Specific actionable requirement","do
 CRAWLED CONTENT:
 ${pageText}
 
-Extract all submission requirements and process details relevant to an indie publisher submitting "${bookTitle || 'Unknown Title'}" (SF/F short story collection).
+Extract all submission requirements and process details relevant to submitting "${bookTitle || 'Unknown Title'}".
 
 Include: entry fees, physical copy requirements + mailing address, digital format specs, word count limits, eligibility rules, important deadlines, required supporting documents, judge/jury info if present.
 
@@ -244,43 +248,43 @@ Return JSON only.`;
   return safeParseJSON(text);
 }
 
-// ── Main handler ───────────────────────────────────────────────────────────────
+// ââ Main handler âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY is not set.' });
+  if (!process.env.OSV_API_KEY) {
+    return res.status(500).json({ error: 'OSV_API_KEY is not set.' });
   }
 
-  const { type, query, existing, awardName, awardUrl, manuscriptText, fileName, projectName, bookTitle } = req.body;
+  const { type, query, existing, awardName, awardUrl, manuscriptText, fileName, projectName, bookTitle, projectType, projectDescription } = req.body;
 
   try {
 
-    // ── DISCOVER: User types a description → full pipeline ─────────────────
+    // ââ DISCOVER: User types a description â full pipeline âââââââââââââââââ
     if (type === 'discover') {
       // 1. Generate search queries
-      const queries = await step1b_discoverQueries(query, bookTitle);
+      const queries = await step1b_discoverQueries(query, bookTitle, projectType, projectDescription);
       console.log('[discover] queries:', queries);
 
       // 2. Search the web
       const rawResults = await step2_searchAwards(Array.isArray(queries) ? queries : [query]);
       console.log('[discover] raw results:', rawResults.length);
 
-      // 3. Filter with Claude
-      const filtered = await step3_filterAwards(rawResults, { title: bookTitle || 'Unknown Title', genres: ['Science Fiction', 'Fantasy', 'Short Stories'] }, existing);
+      // 3. Filter with Claude â pass project context for accurate matching
+      const filtered = await step3_filterAwards(rawResults, { title: bookTitle || 'Unknown Title', genres: [query], projectType, projectDescription }, existing);
       console.log('[discover] filtered awards:', filtered.length);
 
       return res.json({ content: [{ type: 'text', text: JSON.stringify(filtered) }] });
     }
 
-    // ── ANALYZE: Fetch & extract requirements for a known award ────────────
+    // ââ ANALYZE: Fetch & extract requirements for a known award ââââââââââââ
     if (type === 'analyze') {
       const reqs = await step4_extractRequirements({ name: awardName, url: awardUrl }, bookTitle);
       return res.json({ content: [{ type: 'text', text: JSON.stringify(reqs) }] });
     }
 
-    // ── MANUSCRIPT: Full pipeline from uploaded manuscript ─────────────────
+    // ââ MANUSCRIPT: Full pipeline from uploaded manuscript âââââââââââââââââ
     if (type === 'manuscript') {
       // 1. Analyze book
       const bookMeta = await step1_analyzeBook(manuscriptText || '');
