@@ -446,18 +446,22 @@ function openNewProjectModal() {
 async function saveNewProject() {
   const name = document.getElementById('pName').value.trim();
   if (!name) { toast('Project name is required.'); return; }
-  const res = await fetch('/api/data?type=projects', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ name, type: document.getElementById('pType').value, description: document.getElementById('pDesc').value.trim() })
-  });
-  const newProj = await res.json();
-  projects.push(newProj);
-  renderProjectSelect();
-  document.getElementById('projectSelect').value = newProj.id;
-  currentProjectId = newProj.id;
-  switchProject();
-  closeModal('projectOverlay');
-  toast('"' + name + '" project created.');
+  try {
+    const res = await fetch('/api/data?type=projects', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name, type: document.getElementById('pType').value, description: document.getElementById('pDesc').value.trim() })
+    });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || 'Failed to create project (HTTP ' + res.status + ')'); }
+    const newProj = await res.json();
+    if (!newProj.id) throw new Error('Invalid response from server.');
+    projects.push(newProj);
+    renderProjectSelect();
+    document.getElementById('projectSelect').value = newProj.id;
+    currentProjectId = newProj.id;
+    switchProject();
+    closeModal('projectOverlay');
+    toast('"' + name + '" project created.');
+  } catch(e) { console.error('saveNewProject error:', e); toast('Error creating project: ' + e.message); }
 }
 
 async function deleteCurrentProject() {
@@ -828,7 +832,7 @@ async function discoverAwards() {
   const btn = document.getElementById('discoverBtn'), stat = document.getElementById('discoverStatus');
   btn.disabled = true; btn.textContent = 'Searching…'; stat.innerHTML = '<em>Claude is searching the web…</em>';
   try {
-    const res = await fetch('/api/ai', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ type: 'discover', query: q, existing: projectAwards().map(a => a.name).join(', '), bookTitle: proj ? proj.name : '' }) });
+    const res = await fetch('/api/ai', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ type: 'discover', query: q, existing: projectAwards().map(a => a.name).join(', '), bookTitle: proj ? proj.name : '', projectType: proj ? proj.type : '', projectDescription: proj ? proj.description : '' }) });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || 'API error ' + res.status);
     const text = data.content.filter(i => i.type === 'text').map(i => i.text).join('\n');
