@@ -110,13 +110,13 @@ function safeParseJSON(text) {
   try { return JSON.parse(cleaned); } catch {
     const arrMatch = cleaned.match(/\[[\s\S]*\]/);
     if (arrMatch) return JSON.parse(arrMatch[0]);
-    const objMatch = cleaned.match(/\{[\S]*\}/);
+    const objMatch = cleaned.match(/\{[\s\S]*\}/);
     if (objMatch) return JSON.parse(objMatch[0]);
     throw new Error('Could not parse JSON from Claude response');
   }
 }
 
-// ── Pipeline steps ─────────────────────────────────────────────────────────────────
+// ── Pipeline steps ─────────────────────────────────────────────────────────────
 
 // STEP 1: Extract book metadata + search query categories from description/manuscript
 async function step1_analyzeBook(input) {
@@ -152,7 +152,7 @@ async function step1b_discoverQueries(query, bookTitle, projectType, projectDesc
     ? `Project: "${bookTitle || 'Untitled'}" (${projectType || 'book'}). Details: ${projectDescription}`
     : `Project: "${bookTitle || 'Untitled'}" (${projectType || 'book'}).`;
   const prompt = `Generate 4-6 targeted web search queries to find literary awards matching this user query: "${query}"
-$context
+${context}
 
 Return JSON array of search query strings only:
 ["query1", "query2", "query3", "query4"]
@@ -177,7 +177,7 @@ async function step2_searchAwards(queries) {
         }
       }
     } catch (e) {
-      console.warn(`search failed for query "${q}":`, e.message);
+      console.warn(`Search failed for query "${q}":`, e.message);
     }
   }
   return allResults; // raw search hits, may include non-award pages
@@ -200,11 +200,6 @@ SEARCH RESULTS:
 ${JSON.stringify(searchResults.slice(0, 30), null, 2)}
 
 Select 3-8 results that are REAL literary award opportunities (not listicles, not blogs about awards, not eligibility guides). For each, produce:
-[
-  {
-    "name": "Official Award Name",
-    "url": "direct URL to the award/submission page",
-    "notes": "2-3 sentences on eligibility guides). For each, produce:
 [
   {
     "name": "Official Award Name",
@@ -314,9 +309,10 @@ export default async function handler(req, res) {
         // 3a. Filter with Claude using real search results
         filtered = await step3_filterAwards(rawResults, { title: bookTitle || 'Unknown Title', genres: [query], projectType, projectDescription }, existing);
         console.log('[discover] filtered awards (from search):', filtered.length);
-      } else {
-        // 3b. Fallback: search returned nothing — use Claude's own knowledge
-        console.log('[discover] search returned 0 results, using Claude knowledge fallback');
+      }
+      // 3b. Fallback: search returned nothing OR filter found no awards — use Claude's own knowledge
+      if (!filtered || filtered.length === 0) {
+        console.log('[discover] using Claude knowledge fallback (search/filter returned 0)');
         filtered = await step3_knowledgeFallback(query, bookTitle, projectType, projectDescription, existing);
         console.log('[discover] filtered awards (from knowledge):', filtered.length);
       }
@@ -340,12 +336,13 @@ export default async function handler(req, res) {
       const rawResults = await step2_searchAwards(bookMeta.searchQueries || ['literary award short fiction indie publisher']);
       console.log('[manuscript] raw results:', rawResults.length);
 
-      // 3. Filter — with fallback to Claude knowledge if search fails
+      // 3. Filter — with fallback to Claude knowledge if search fails or filter returns nothing
       let filteredAwards;
       if (rawResults.length > 0) {
         filteredAwards = await step3_filterAwards(rawResults, bookMeta, '');
-      } else {
-        console.log('[manuscript] search returned 0 results, using Claude knowledge fallback');
+      }
+      if (!filteredAwards || filteredAwards.length === 0) {
+        console.log('[manuscript] using Claude knowledge fallback (search/filter returned 0)');
         const queryStr = (bookMeta.genres || []).join(' ') + ' ' + (bookMeta.themes || []).join(' ');
         filteredAwards = await step3_knowledgeFallback(queryStr, bookMeta.title, projectType, projectDescription, '');
       }
