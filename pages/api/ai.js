@@ -6,7 +6,7 @@ const SEARCH_URL = 'https://developer.osv.engineering/alpha/web/search';
 const CRAWL_URL  = 'https://developer.osv.engineering/web/crawl';
 const EXTRACT_URL = 'https://developer.osv.engineering/web/extract';
 
-// ── Shared helpers ─────────────────────────────────────────────────────────────
+// ââ Shared helpers âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 async function callClaude(messages, systemPrompt, maxTokens = 1500) {
   const body = {
@@ -116,7 +116,7 @@ function safeParseJSON(text) {
   }
 }
 
-// ── Pipeline steps ─────────────────────────────────────────────────────────────
+// ââ Pipeline steps âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 // STEP 1: Extract book metadata + search query categories from description/manuscript
 async function step1_analyzeBook(input) {
@@ -140,24 +140,39 @@ Return JSON only:
   ]
 }
 
-Generate 4-6 targeted search queries that would find real literary awards matching this book's genre, themes, publisher type (indie), and format.`;
+Generate 8-12 targeted search queries that would find real awards matching this work's genre, themes, format, and media type. Include both broad and niche award circuits.`;
 
   const text = await callClaude([{ role: 'user', content: prompt }], null, 1200);
   return safeParseJSON(text);
 }
 
+// Media type â award vocabulary mapping
+const MEDIA_AWARD_VOCAB = {
+  'book':          'literary prize, grant, fiction award, poetry prize, publishing competition',
+  'film':          'film festival, cinema award, documentary prize, IFP grant, film fund',
+  'short-film':    'short film festival, student film award, short cinema competition',
+  'screenplay':    'screenplay competition, script contest, writing fellowship, screenwriting lab',
+  'podcast':       'podcast award, audio storytelling prize, journalism honour, audio fiction competition',
+  'graphic-novel': 'comics award, graphic novel prize, Eisner, Harvey Award, illustration competition',
+  'stage-play':    'playwriting competition, theatre festival, dramaturgy award, playwright residency',
+  'audiobook':     'audiobook award, Audie Award, spoken word competition, narrator prize',
+};
+function getAwardVocab(type) { return MEDIA_AWARD_VOCAB[type] || MEDIA_AWARD_VOCAB['book']; }
+
 // STEP 1b: For discover mode, generate search queries from a user query string
 async function step1b_discoverQueries(query, bookTitle, projectType, projectDescription) {
+  const vocab = getAwardVocab(projectType);
   const context = projectDescription
     ? `Project: "${bookTitle || 'Untitled'}" (${projectType || 'book'}). Details: ${projectDescription}`
     : `Project: "${bookTitle || 'Untitled'}" (${projectType || 'book'}).`;
-  const prompt = `Generate 4-6 targeted web search queries to find literary awards matching this user query: "${query}"
+  const prompt = `Generate 8-12 targeted web search queries to find awards, competitions, and festivals matching this query: "${query}"
 ${context}
+Relevant award types for this media: ${vocab}
 
 Return JSON array of search query strings only:
 ["query1", "query2", "query3", "query4"]
 
-Make queries specific and diverse: include the genre/category from the user query, award type, year (2025 or 2026), and submission status. Do NOT restrict to any single genre — match the user's query.`;
+Make queries specific and diverse: vary the award type, year (2025 or 2026), eligibility status (open submissions, accepting entries), and geographic scope (US, UK, international). Cover both well-known and niche circuits. Do NOT restrict to any single genre â match the user's query.`;
 
   const text = await callClaude([{ role: 'user', content: prompt }], null, 600);
   return safeParseJSON(text);
@@ -170,7 +185,7 @@ async function step2_searchAwards(queries) {
   for (const q of queries) {
     try {
       const data = await searchWeb(q, 'general');
-      for (const r of (data.results || []).slice(0, 6)) {
+      for (const r of (data.results || []).slice(0, 10)) {
         if (!seen.has(r.url)) {
           seen.add(r.url);
           allResults.push({ title: r.title, url: r.url, snippet: r.content });
@@ -186,33 +201,35 @@ async function step2_searchAwards(queries) {
 // STEP 3: Claude filters search results to identify real award pages
 async function step3_filterAwards(searchResults, bookMeta, existing) {
   const genres = (bookMeta.genres || []).join(', ') || 'general';
-  const prompt = `You are a literary awards expert. Here are web search results that may contain literary award opportunities.
+  const vocab = getAwardVocab(bookMeta.projectType);
+  const prompt = `You are an awards expert with deep knowledge of prizes, festivals, grants, and competitions across all creative media. Here are web search results that may contain award opportunities.
 
 PROJECT CONTEXT:
 - Title: ${bookMeta.title || 'Unknown'}
+- Media Type: ${bookMeta.projectType || 'book'}
 - Genres/Categories: ${genres}
-${bookMeta.projectType ? `- Type: ${bookMeta.projectType}` : ''}
 ${bookMeta.projectDescription ? `- Description: ${bookMeta.projectDescription}` : ''}
+- Relevant award circuits: ${vocab}
 
 ALREADY TRACKING (exclude these): ${existing || 'none'}
 
 SEARCH RESULTS:
-${JSON.stringify(searchResults.slice(0, 30), null, 2)}
+${JSON.stringify(searchResults.slice(0, 60), null, 2)}
 
-Select 3-8 results that are REAL literary award opportunities (not listicles, not blogs about awards, not eligibility guides). For each, produce:
+Select 10-20 results that are REAL award opportunities (not listicles, not blogs about awards, not eligibility guides, not news articles). For each, produce:
 [
   {
     "name": "Official Award Name",
     "url": "direct URL to the award/submission page",
     "notes": "2-3 sentences on eligibility and fit",
     "deadline": "deadline if visible in snippet, else 'Check website'",
-    "status": "eligible if book clearly qualifies, ineligible if it clearly does not, researching if unsure"
+    "status": "eligible if project clearly qualifies, ineligible if it clearly does not, researching if unsure"
   }
 ]
 
-Include awards that match the genres/categories above. Be inclusive — if an award plausibly fits, include it with status "researching". Return JSON array only.`;
+Be thorough and inclusive â if an award plausibly fits, include it with status "researching". Cover both prestigious and niche awards. Return JSON array only.`;
 
-  const text = await callClaude([{ role: 'user', content: prompt }], null, 1500);
+  const text = await callClaude([{ role: 'user', content: prompt }], null, 3000);
   return safeParseJSON(text);
 }
 
@@ -221,7 +238,7 @@ async function step4_extractRequirements(award, bookTitle) {
   const pageText = await getAwardPageText(award.url);
 
   if (!pageText || pageText.length < 100) {
-    // No crawl data — Claude uses its knowledge
+    // No crawl data â Claude uses its knowledge
     const prompt = `List submission requirements for the literary award "${award.name}" (${award.url}).
 Project: "${bookTitle || 'Unknown Title'}".
 Include: entry fees, physical/digital submission format, word count limits, eligibility rules, deadline, supporting docs.
@@ -248,21 +265,23 @@ Return JSON only.`;
   return safeParseJSON(text);
 }
 
-// STEP 3b: Fallback — use Claude's knowledge when web search returns nothing
+// STEP 3b: Fallback â use Claude's knowledge when web search returns nothing
 async function step3_knowledgeFallback(query, bookTitle, projectType, projectDescription, existing) {
   const context = [
     bookTitle ? `Title: "${bookTitle}"` : '',
-    projectType ? `Type: ${projectType}` : '',
+    projectType ? `Media Type: ${projectType}` : '',
     projectDescription ? `Description: ${projectDescription}` : '',
   ].filter(Boolean).join('\n');
+  const vocab = getAwardVocab(projectType);
 
-  const prompt = `You are a literary awards expert with deep knowledge of real literary prizes, grants, and competitions worldwide.
+  const prompt = `You are an awards expert with comprehensive knowledge of prizes, festivals, grants, and competitions across all creative media worldwide.
 
 A user is looking for: "${query}"
 ${context ? `\nPROJECT CONTEXT:\n${context}` : ''}
 ${existing ? `\nALREADY TRACKING (exclude these): ${existing}` : ''}
+Relevant award circuits for this media type: ${vocab}
 
-Based on your knowledge, identify 5-8 REAL literary awards, prizes, or grants that match this query. Include awards that are currently active and accepting submissions (or will open soon).
+Based on your knowledge, identify 10-15 REAL awards, prizes, festivals, or grants that match this query and media type. Include both well-known and niche opportunities that are currently active or open annually.
 
 Return JSON array only:
 [
@@ -275,13 +294,13 @@ Return JSON array only:
   }
 ]
 
-Focus on real, well-known awards. Return JSON only.`;
+Be thorough â cover prestigious, mid-tier, and niche awards. Include international opportunities where relevant. Return JSON only.`;
 
-  const text = await callClaude([{ role: 'user', content: prompt }], null, 1500);
+  const text = await callClaude([{ role: 'user', content: prompt }], null, 2500);
   return safeParseJSON(text);
 }
 
-// ── Main handler ───────────────────────────────────────────────────────────────
+// ââ Main handler âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -294,7 +313,7 @@ export default async function handler(req, res) {
 
   try {
 
-    // ── DISCOVER: User types a description → full pipeline ─────────────────
+    // ââ DISCOVER: User types a description â full pipeline âââââââââââââââââ
     if (type === 'discover') {
       // 1. Generate search queries
       const queries = await step1b_discoverQueries(query, bookTitle, projectType, projectDescription);
@@ -310,7 +329,7 @@ export default async function handler(req, res) {
         filtered = await step3_filterAwards(rawResults, { title: bookTitle || 'Unknown Title', genres: [query], projectType, projectDescription }, existing);
         console.log('[discover] filtered awards (from search):', filtered.length);
       }
-      // 3b. Fallback: search returned nothing OR filter found no awards — use Claude's own knowledge
+      // 3b. Fallback: search returned nothing OR filter found no awards â use Claude's own knowledge
       if (!filtered || filtered.length === 0) {
         console.log('[discover] using Claude knowledge fallback (search/filter returned 0)');
         filtered = await step3_knowledgeFallback(query, bookTitle, projectType, projectDescription, existing);
@@ -320,23 +339,25 @@ export default async function handler(req, res) {
       return res.json({ content: [{ type: 'text', text: JSON.stringify(filtered) }] });
     }
 
-    // ── ANALYZE: Fetch & extract requirements for a known award ────────────
+    // ââ ANALYZE: Fetch & extract requirements for a known award ââââââââââââ
     if (type === 'analyze') {
       const reqs = await step4_extractRequirements({ name: awardName, url: awardUrl }, bookTitle);
       return res.json({ content: [{ type: 'text', text: JSON.stringify(reqs) }] });
     }
 
-    // ── MANUSCRIPT: Full pipeline from uploaded manuscript ─────────────────
+    // ââ MANUSCRIPT: Full pipeline from uploaded manuscript âââââââââââââââââ
     if (type === 'manuscript') {
-      // 1. Analyze book
+      // 1. Analyze work (media-type aware)
       const bookMeta = await step1_analyzeBook(manuscriptText || '');
-      console.log('[manuscript] bookMeta:', bookMeta.title, bookMeta.genres);
+      bookMeta.projectType = projectType || 'book';
+      bookMeta.projectDescription = projectDescription || '';
+      console.log('[manuscript] bookMeta:', bookMeta.title, bookMeta.genres, 'type:', bookMeta.projectType);
 
       // 2. Search
       const rawResults = await step2_searchAwards(bookMeta.searchQueries || ['literary award short fiction indie publisher']);
       console.log('[manuscript] raw results:', rawResults.length);
 
-      // 3. Filter — with fallback to Claude knowledge if search fails or filter returns nothing
+      // 3. Filter â with fallback to Claude knowledge if search fails or filter returns nothing
       let filteredAwards;
       if (rawResults.length > 0) {
         filteredAwards = await step3_filterAwards(rawResults, bookMeta, '');
@@ -344,7 +365,7 @@ export default async function handler(req, res) {
       if (!filteredAwards || filteredAwards.length === 0) {
         console.log('[manuscript] using Claude knowledge fallback (search/filter returned 0)');
         const queryStr = (bookMeta.genres || []).join(' ') + ' ' + (bookMeta.themes || []).join(' ');
-        filteredAwards = await step3_knowledgeFallback(queryStr, bookMeta.title, projectType, projectDescription, '');
+        filteredAwards = await step3_knowledgeFallback(queryStr, bookMeta.title, bookMeta.projectType, bookMeta.projectDescription, '');
       }
       console.log('[manuscript] filtered:', filteredAwards.length);
 
