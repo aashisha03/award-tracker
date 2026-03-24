@@ -240,8 +240,8 @@ input[type="file"]{display:none;}
   </div>
 
   <div class="panel panel-manuscript">
-    <h2>Manuscript Award Matcher <span class="badge badge-blue">Claude AI</span></h2>
-    <p>Upload your manuscript — Claude reads it, identifies genre, themes and audience, then finds awards that suit your specific book.</p>
+    <h2 id="msTitle">Manuscript Award Matcher <span class="badge badge-blue">Claude AI</span></h2>
+    <p id="msDesc">Upload your manuscript — Claude reads it, identifies genre, themes and audience, then finds awards that suit your specific book.</p>
     <div class="upload-zone" id="uploadZone" onclick="document.getElementById('msFile').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
       <div class="upload-icon">+</div>
       <p><strong>Click to upload</strong> or drag & drop</p>
@@ -350,8 +350,14 @@ input[type="file"]{display:none;}
       <div class="form-row"><label>Project Name *</label><input type="text" id="pName" placeholder="e.g. White Mirror Stories"></div>
       <div class="form-row"><label>Type</label>
         <select id="pType">
-          <option value="book">Book</option>
-          <option value="film" disabled>Film (Coming Soon)</option>
+          <option value="book">📖 Book</option>
+          <option value="film">🎬 Film</option>
+          <option value="short-film">🎞️ Short Film</option>
+          <option value="screenplay">📝 Screenplay</option>
+          <option value="podcast">🎙️ Podcast</option>
+          <option value="graphic-novel">🎨 Graphic Novel</option>
+          <option value="stage-play">🎭 Stage Play</option>
+          <option value="audiobook">🎧 Audiobook</option>
         </select>
       </div>
       <div class="form-row"><label>Description</label><textarea id="pDesc" placeholder="Brief description…"></textarea></div>
@@ -415,6 +421,27 @@ function renderProjectSelect() {
   ).join('');
 }
 
+// ── Media type helpers ─────────────────────────────────────────────────────────
+const MEDIA_INFO = {
+  'book':          { emoji: '📖', label: 'Book',         upload: 'Manuscript Award Matcher',    uploadDesc: 'Upload your manuscript — Claude reads it, identifies genre, themes and audience, then finds literary awards that suit your book.',          fileLabel: 'manuscript' },
+  'film':          { emoji: '🎬', label: 'Film',         upload: 'Film Award Matcher',           uploadDesc: 'Upload your script or treatment — Claude analyses it and finds film festivals, cinema awards, and grant opportunities.',                   fileLabel: 'script / treatment' },
+  'short-film':    { emoji: '🎞️', label: 'Short Film',   upload: 'Short Film Award Matcher',     uploadDesc: 'Upload your short film script — Claude finds short film festivals, student competitions, and exhibition opportunities.',                    fileLabel: 'script' },
+  'screenplay':    { emoji: '📝', label: 'Screenplay',   upload: 'Screenplay Award Matcher',     uploadDesc: 'Upload your screenplay — Claude reads it and finds competitions, fellowships, and labs for unproduced scripts.',                           fileLabel: 'screenplay' },
+  'podcast':       { emoji: '🎙️', label: 'Podcast',      upload: 'Podcast Award Matcher',        uploadDesc: 'Upload a transcript or show notes — Claude finds podcast awards, audio storytelling prizes, and journalism honours.',                      fileLabel: 'transcript / show notes' },
+  'graphic-novel': { emoji: '🎨', label: 'Graphic Novel', upload: 'Graphic Novel Award Matcher', uploadDesc: 'Upload your script or synopsis — Claude finds Eisner-eligible competitions, comics awards, and illustration prizes.',                      fileLabel: 'script / synopsis' },
+  'stage-play':    { emoji: '🎭', label: 'Stage Play',   upload: 'Stage Play Award Matcher',     uploadDesc: 'Upload your script — Claude finds playwriting competitions, theatre festivals, development programmes, and residencies.',                   fileLabel: 'script' },
+  'audiobook':     { emoji: '🎧', label: 'Audiobook',    upload: 'Audiobook Award Matcher',      uploadDesc: 'Upload your manuscript or liner notes — Claude finds Audie Award eligibility, audiobook prizes, and spoken-word competitions.',            fileLabel: 'manuscript / notes' },
+};
+function getMedia(type) { return MEDIA_INFO[type] || MEDIA_INFO['book']; }
+
+function updateMediaPanel(type) {
+  const m = getMedia(type);
+  const titleEl = document.getElementById('msTitle');
+  const descEl  = document.getElementById('msDesc');
+  if (titleEl) titleEl.innerHTML = `${m.upload} <span class="badge badge-blue">Claude AI</span>`;
+  if (descEl)  descEl.textContent = m.uploadDesc;
+}
+
 function switchProject() {
   const sel = document.getElementById('projectSelect');
   currentProjectId = sel.value;
@@ -427,8 +454,10 @@ function switchProject() {
 
   if (proj) {
     titleEl.textContent = proj.name;
-    tagsEl.innerHTML = `<span class="tag">${esc(proj.type)}</span>${proj.description ? `<span class="tag acc">${esc(proj.description)}</span>` : ''}`;
+    const m = getMedia(proj.type);
+    tagsEl.innerHTML = `<span class="tag">${m.emoji} ${esc(m.label)}</span>${proj.description ? `<span class="tag acc">${esc(proj.description)}</span>` : ''}`;
     delBtn.style.display = '';
+    updateMediaPanel(proj.type);
   } else {
     titleEl.textContent = 'Select a Project';
     tagsEl.innerHTML = '';
@@ -871,7 +900,7 @@ async function processManuscript(file) {
     else { manuscriptText = await readAsText(file); }
     if (!manuscriptText.trim()) { toast('Could not extract text from this file.'); return; }
     const proj = projects.find(p => p.id === currentProjectId);
-    const body = { type: 'manuscript', manuscriptText: manuscriptText.slice(0, 12000), fileName: file.name, bookTitle: proj ? proj.name : '' };
+    const body = { type: 'manuscript', manuscriptText: manuscriptText.slice(0, 12000), fileName: file.name, bookTitle: proj ? proj.name : '', projectType: proj ? proj.type : 'book', projectDescription: proj ? proj.description : '' };
     stat.innerHTML = '<em>Claude is analysing your manuscript…</em>';
     const res = await fetch('/api/ai', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
     const data = await res.json();
